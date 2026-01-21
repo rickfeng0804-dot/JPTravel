@@ -39,11 +39,19 @@ export interface SouvenirItem {
   estimatedPrice: string;
 }
 
+export interface FoodItem {
+  name: string;
+  description: string;
+  bestPlaceToEat: string;
+  estimatedPrice: string;
+}
+
 export interface ItineraryResult {
   title: string;
   summary: string;
   days: DayPlan[];
   recommendedSouvenirs: SouvenirItem[];
+  recommendedFood: FoodItem[];
 }
 
 export enum AppState {

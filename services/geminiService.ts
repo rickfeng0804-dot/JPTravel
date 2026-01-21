@@ -47,7 +47,8 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
     5. 每日行程需包含時間、具體地點名稱、活動說明及預算估算。
        - **活動說明中，若該地點為私房景點或特殊體驗，請特別標註其獨特之處**。
     6. **請額外提供一份「必買土特產及禮品清單」**，請推薦具當地文化特色、老舖限定或具有故事性的商品 (5-8項)，而非一般機場常見禮盒。
-    7. **每個活動請標記類型 (type)**，只能是以下之一：
+    7. **請額外提供一份「必吃美食清單」**，推薦具當地特色、隱藏版美食或老舖 (5-8項)，這些可以是具體的菜色名稱或特定名店。
+    8. **每個活動請標記類型 (type)**，只能是以下之一：
        - 'sightseeing': 觀光景點、參觀
        - 'food': 用餐、咖啡廳、小吃
        - 'transport': 交通移動、搭車、飛機
@@ -109,9 +110,23 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
               },
               required: ["name", "description", "bestPlaceToBuy", "estimatedPrice"]
             }
+          },
+          recommendedFood: {
+            type: Type.ARRAY,
+            description: "推薦的必吃美食清單",
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                name: { type: Type.STRING, description: "美食名稱" },
+                description: { type: Type.STRING, description: "口感特色或必吃理由" },
+                bestPlaceToEat: { type: Type.STRING, description: "推薦店家或區域" },
+                estimatedPrice: { type: Type.STRING, description: "參考價格" }
+              },
+              required: ["name", "description", "bestPlaceToEat", "estimatedPrice"]
+            }
           }
         },
-        required: ["title", "summary", "days", "recommendedSouvenirs"]
+        required: ["title", "summary", "days", "recommendedSouvenirs", "recommendedFood"]
       }
     }
   });
