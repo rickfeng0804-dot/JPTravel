@@ -1,7 +1,6 @@
 import React from 'react';
 import { ItineraryResult, DayPlan, Activity, SouvenirItem, FoodItem } from '../types';
-import { MapPin, ArrowLeft, FileSpreadsheet, ShoppingBag, Gift, Utensils, Camera, Train, Bed, Download } from 'lucide-react';
-import { exportItineraryToExcel, exportDayItineraryToExcel } from '../services/exportService';
+import { MapPin, ArrowLeft, ShoppingBag, Gift, Utensils, Camera, Train, Bed } from 'lucide-react';
 import ActivityIllustration from './ActivityIllustration';
 import DayMapGenerator from './DayMapGenerator';
 
@@ -64,14 +63,6 @@ const ACTIVITY_STYLES: Record<string, { icon: React.ReactNode, color: string, bg
 
 const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset }) => {
   
-  const handleExportExcel = () => {
-    exportItineraryToExcel(itinerary);
-  };
-
-  const handleExportDay = (day: DayPlan) => {
-    exportDayItineraryToExcel(day, itinerary.title);
-  };
-
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8 pb-12 animate-fade-in-up">
       
@@ -84,14 +75,8 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
         
         <h1 className="text-xl md:text-2xl font-bold text-gray-800 text-center">{itinerary.title}</h1>
          
-        <button 
-          onClick={handleExportExcel} 
-          className="flex items-center px-4 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-lg text-sm font-semibold transition-colors"
-          title="匯出完整行程表至 Excel"
-        >
-          <FileSpreadsheet className="w-4 h-4 mr-2" />
-          匯出完整 Excel
-        </button>
+        {/* Placeholder for alignment balance */}
+        <div className="w-24 hidden md:block"></div>
       </div>
 
       <div className="bg-white/90 rounded-3xl p-8 shadow-lg border border-emerald-50 mb-8 text-center">
@@ -112,16 +97,6 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
                     </h3>
                     <p className="text-emerald-100 font-medium mt-1">{day.theme}</p>
                   </div>
-                  
-                  {/* Single Day Export Button */}
-                  <button 
-                    onClick={() => handleExportDay(day)}
-                    className="flex items-center px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs md:text-sm font-medium transition-colors border border-white/20 backdrop-blur-sm"
-                    title={`匯出 Day ${day.day} 行程`}
-                  >
-                    <Download className="w-4 h-4 mr-1.5" />
-                    匯出此日行程
-                  </button>
                 </div>
 
                 {/* Activities Content - Full Width */}

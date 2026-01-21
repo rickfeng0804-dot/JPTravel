@@ -177,8 +177,9 @@ export const generateActivityIllustration = async (activity: string, location: s
 
 /**
  * Generates a Studio Ghibli style travel map for a specific day.
+ * @param variant - A number to encourage variation in the generated image.
  */
-export const generateDayMap = async (day: number, theme: string, activities: string[], destination: string): Promise<string> => {
+export const generateDayMap = async (day: number, theme: string, activities: string[], destination: string, variant: number = 0): Promise<string> => {
   // Construct a route string from the main activities
   const routeDescription = activities.join(' -> ');
 
@@ -188,6 +189,15 @@ export const generateDayMap = async (day: number, theme: string, activities: str
     **Trip Context:**
     - **Day Theme:** "${theme}" (Please strongly reflect this mood in the map's colors, icons, and decorations).
     - **Key Locations:** ${routeDescription}.
+    - **Variation:** ${variant} (Please create a unique layout distinct from previous versions).
+
+    **Visual Cues & Details (Enhance these elements):**
+    - **Theme Reflection:** 
+      - If "History/Culture": Use warm earth tones, traditional patterns, torii gates, lanterns, and temples as decorative borders.
+      - If "Nature/Scenery": Use vibrant greens and blues, flowers, leaves, mountains, rivers, and soft clouds.
+      - If "Food/Shopping": Use pastel pop colors, tiny illustrations of snacks (ramen, sushi), shopping bags, and cute shopfronts.
+      - If "City/Modern": Use bright neon accents, clean lines, trains, and stylized buildings.
+    - **Activity Icons:** For each location in "${routeDescription}", try to include a tiny specific icon representing it (e.g., a bowl for a restaurant, a camera for a viewpoint, a bag for shopping).
 
     **Artistic Style:**
     - **Style:** Studio Ghibli background art style (Hayao Miyazaki) mixed with a cute travel journal aesthetic.
@@ -199,7 +209,6 @@ export const generateDayMap = async (day: number, theme: string, activities: str
     - **Landmarks:** Draw cute, miniature, detailed representations of the key locations listed, distributed across the map.
     - **Path:** **IMPORTANT:** Connect these locations in the exact order (${routeDescription}) using a **visible dotted line** or a **playful trail of footprints**. The path should meander through the map to show the journey's flow.
     - **Environment:** Fill empty spaces with elements relevant to ${destination} (e.g., local flora, terrain, specific cultural symbols).
-    - **Decorations:** If the theme is "Food", include tiny food illustrations. If "Nature", include trees/flowers. If "History", include torii gates or old buildings.
     - **Labels:** You may include artistic, hand-written style text for main locations if it fits the style, but prioritized visual storytelling.
     
     The image should look like a beautiful page from a traveler's sketchbook capturing the essence of the day.
@@ -224,4 +233,52 @@ export const generateDayMap = async (day: number, theme: string, activities: str
   }
   
   throw new Error("Failed to generate map");
+};
+
+/**
+ * Generates a focused transportation route map.
+ * @param variant - A number to encourage variation in the generated image.
+ */
+export const generateTransportationMap = async (day: number, theme: string, activities: string[], destination: string, variant: number = 0): Promise<string> => {
+  const routeDescription = activities.join(' -> ');
+
+  const prompt = `
+    Create a clean, illustrated transportation route map (Transit Map style) for a day trip in ${destination}.
+    
+    **Trip Context:**
+    - **Route:** ${routeDescription}.
+    - **Variation:** ${variant}.
+
+    **Visual Style & Composition:**
+    - **Style:** Minimalist, Japanese tourist map style (clear lines, cute functional icons).
+    - **Background:** Light solid color or very subtle grid/terrain pattern. Clean and easy to read.
+    - **Routes:** Use THICK, CLEAR COLORED LINES to connect the locations in order. 
+      - Use solid lines for trains/subways.
+      - Use dashed lines for walking paths.
+    - **Nodes:** Use distinct circles or pins for each stop (${activities.join(', ')}). Number them 1, 2, 3...
+    - **Icons:** Add small icons representing the mode of transport likely used between points (e.g., a mini train, a bus, a walking figure).
+    - **Vibe:** Functional but friendly and cute. Not overly artistic/messy like a watercolor painting; more like a helper map in a brochure.
+
+    **Goal:** Visualizing the movement from A to B to C clearly.
+  `;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: {
+      parts: [{ text: prompt }]
+    },
+    config: {
+      imageConfig: {
+        aspectRatio: "4:3",
+      }
+    }
+  });
+
+  for (const part of response.candidates?.[0]?.content?.parts || []) {
+    if (part.inlineData) {
+      return `data:image/png;base64,${part.inlineData.data}`;
+    }
+  }
+  
+  throw new Error("Failed to generate transportation map");
 };
