@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TripFormData } from '../types';
-import { Calendar, MapPin, Users, Clock, Heart, Coffee, Train, Home, PlaneTakeoff, PlaneLanding, Timer } from 'lucide-react';
+import { Calendar, MapPin, Users, Clock, Heart, Coffee, Train, Home, PlaneTakeoff, PlaneLanding, Timer, ShoppingBag } from 'lucide-react';
 
 interface HeroInputProps {
   onSubmit: (data: TripFormData) => void;
@@ -26,7 +26,8 @@ const HeroInput: React.FC<HeroInputProps> = ({ onSubmit, isLoading }) => {
     transportation: '',
     departureTime: '09:00',
     flightDuration: '3.5',
-    returnTime: '18:00'
+    returnTime: '18:00',
+    souvenirPreferences: ''
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -176,7 +177,7 @@ const HeroInput: React.FC<HeroInputProps> = ({ onSubmit, isLoading }) => {
             </div>
           </div>
 
-          {/* 航班資訊區塊 - 新增 */}
+          {/* 航班資訊區塊 */}
           <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
             <h3 className="text-emerald-800 font-bold mb-4 flex items-center text-sm">
               <PlaneTakeoff className="w-4 h-4 mr-2" />
@@ -233,7 +234,7 @@ const HeroInput: React.FC<HeroInputProps> = ({ onSubmit, isLoading }) => {
             </div>
           </div>
 
-          <div className="border-t border-gray-100 pt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="border-t border-gray-100 pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                {/* Food */}
               <div className="space-y-2">
               <label className="flex items-center text-gray-700 font-semibold text-sm">
@@ -245,6 +246,22 @@ const HeroInput: React.FC<HeroInputProps> = ({ onSubmit, isLoading }) => {
                 name="foodPreferences"
                 placeholder="拉麵, 甜點, 在地小吃..."
                 value={formData.foodPreferences}
+                onChange={handleChange}
+                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none bg-gray-50/50"
+              />
+            </div>
+            
+            {/* Souvenir / Shopping - 新增 */}
+            <div className="space-y-2">
+              <label className="flex items-center text-gray-700 font-semibold text-sm">
+                <ShoppingBag className="w-4 h-4 mr-2 text-emerald-500" />
+                欲購買土特產/禮品
+              </label>
+              <input
+                type="text"
+                name="souvenirPreferences"
+                placeholder="例如：白色戀人, 藥妝, 電器, 抹茶..."
+                value={formData.souvenirPreferences}
                 onChange={handleChange}
                 className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none bg-gray-50/50"
               />

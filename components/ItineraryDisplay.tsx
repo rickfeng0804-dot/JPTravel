@@ -1,6 +1,6 @@
 import React from 'react';
-import { ItineraryResult, DayPlan, Activity } from '../types';
-import { MapPin, Clock, ArrowLeft, FileSpreadsheet } from 'lucide-react';
+import { ItineraryResult, DayPlan, Activity, SouvenirItem } from '../types';
+import { MapPin, Clock, ArrowLeft, FileSpreadsheet, ShoppingBag, Gift } from 'lucide-react';
 import { exportItineraryToExcel } from '../services/exportService';
 
 interface ItineraryDisplayProps {
@@ -94,6 +94,43 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
             );
         })}
       </div>
+
+      {/* Souvenir Section */}
+      {itinerary.recommendedSouvenirs && itinerary.recommendedSouvenirs.length > 0 && (
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-3xl p-8 shadow-lg border border-orange-100 mt-12">
+           <div className="flex items-center gap-3 mb-8">
+             <div className="p-3 bg-orange-100 rounded-full">
+               <ShoppingBag className="w-8 h-8 text-orange-600" />
+             </div>
+             <div>
+               <h3 className="text-2xl font-bold text-orange-800 font-serif">必買伴手禮清單</h3>
+               <p className="text-orange-600/80 text-sm">園長推薦的土特產與紀念品</p>
+             </div>
+           </div>
+           
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             {itinerary.recommendedSouvenirs.map((item: SouvenirItem, idx) => (
+               <div key={idx} className="bg-white p-5 rounded-2xl shadow-sm border border-orange-100 hover:shadow-md transition-shadow flex flex-col gap-2">
+                 <div className="flex justify-between items-start">
+                    <h4 className="font-bold text-lg text-gray-800 flex items-center gap-2">
+                      <Gift className="w-4 h-4 text-orange-400" />
+                      {item.name}
+                    </h4>
+                    <span className="text-xs font-mono bg-orange-100 text-orange-800 px-2 py-1 rounded-full whitespace-nowrap">
+                      {item.estimatedPrice}
+                    </span>
+                 </div>
+                 <p className="text-sm text-gray-600 leading-relaxed">{item.description}</p>
+                 <div className="mt-auto pt-3 flex items-center text-xs text-orange-600 font-medium">
+                   <MapPin className="w-3 h-3 mr-1" />
+                   推薦地點: {item.bestPlaceToBuy}
+                 </div>
+               </div>
+             ))}
+           </div>
+        </div>
+      )}
+
     </div>
   );
 };

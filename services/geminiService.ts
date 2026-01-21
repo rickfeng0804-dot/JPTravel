@@ -25,6 +25,9 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
     - 出發航班時間：${formData.departureTime}
     - 預計飛行時間：${formData.flightDuration} 小時
     - 回程航班時間：${formData.returnTime}
+
+    **購物與伴手禮需求：**
+    - ${formData.souvenirPreferences ? `使用者想購買：${formData.souvenirPreferences}` : '請推薦當地特色土特產與必買禮品'}
     
     **規劃規則：**
     1. **第一天行程**：
@@ -36,6 +39,7 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
     3. **所有輸出內容必須使用「繁體中文 (Traditional Chinese)」**。
     4. 請提供一個吸引人的標題、簡短的行程摘要。
     5. 每日行程需包含時間、具體地點名稱、活動說明及預算估算。
+    6. **請額外提供一份「必買土特產及禮品清單」**，根據目的地與使用者需求推薦5-8項商品。
   `;
 
   const response = await ai.models.generateContent({
@@ -72,9 +76,23 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
               },
               required: ["day", "theme", "activities"]
             }
+          },
+          recommendedSouvenirs: {
+            type: Type.ARRAY,
+            description: "推薦的土特產與禮品清單",
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                name: { type: Type.STRING, description: "商品名稱" },
+                description: { type: Type.STRING, description: "商品介紹與特色" },
+                bestPlaceToBuy: { type: Type.STRING, description: "推薦購買地點" },
+                estimatedPrice: { type: Type.STRING, description: "參考價格" }
+              },
+              required: ["name", "description", "bestPlaceToBuy", "estimatedPrice"]
+            }
           }
         },
-        required: ["title", "summary", "days"]
+        required: ["title", "summary", "days", "recommendedSouvenirs"]
       }
     }
   });

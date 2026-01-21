@@ -11,6 +11,8 @@ export interface TripFormData {
   departureTime: string;
   flightDuration: string;
   returnTime: string;
+  // 新增購物清單需求
+  souvenirPreferences: string;
 }
 
 export interface Activity {
@@ -27,10 +29,18 @@ export interface DayPlan {
   activities: Activity[];
 }
 
+export interface SouvenirItem {
+  name: string;
+  description: string;
+  bestPlaceToBuy: string;
+  estimatedPrice: string;
+}
+
 export interface ItineraryResult {
   title: string;
   summary: string;
   days: DayPlan[];
+  recommendedSouvenirs: SouvenirItem[];
 }
 
 export enum AppState {
