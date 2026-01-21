@@ -15,12 +15,15 @@ export interface TripFormData {
   souvenirPreferences: string;
 }
 
+export type ActivityType = 'sightseeing' | 'food' | 'transport' | 'shopping' | 'accommodation' | 'other';
+
 export interface Activity {
   time: string;
   activity: string;
   description: string;
   location: string;
   costEstimate?: string;
+  type: ActivityType;
 }
 
 export interface DayPlan {

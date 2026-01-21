@@ -1,12 +1,64 @@
 import React from 'react';
-import { ItineraryResult, DayPlan, Activity, SouvenirItem } from '../types';
-import { MapPin, Clock, ArrowLeft, FileSpreadsheet, ShoppingBag, Gift } from 'lucide-react';
+import { ItineraryResult, DayPlan, Activity, SouvenirItem, ActivityType } from '../types';
+import { MapPin, Clock, ArrowLeft, FileSpreadsheet, ShoppingBag, Gift, Utensils, Camera, Train, Bed } from 'lucide-react';
 import { exportItineraryToExcel } from '../services/exportService';
 
 interface ItineraryDisplayProps {
   itinerary: ItineraryResult;
   onReset: () => void;
 }
+
+// 定義不同活動類型的樣式設定
+const ACTIVITY_STYLES: Record<string, { icon: React.ReactNode, color: string, bg: string, border: string, ring: string, label: string }> = {
+  sightseeing: { 
+    icon: <Camera className="w-4 h-4" />, 
+    color: 'text-emerald-700', 
+    bg: 'bg-emerald-50', 
+    border: 'border-emerald-100',
+    ring: 'ring-emerald-200',
+    label: '景點'
+  },
+  food: { 
+    icon: <Utensils className="w-4 h-4" />, 
+    color: 'text-orange-700', 
+    bg: 'bg-orange-50', 
+    border: 'border-orange-100',
+    ring: 'ring-orange-200',
+    label: '美食'
+  },
+  transport: { 
+    icon: <Train className="w-4 h-4" />, 
+    color: 'text-blue-700', 
+    bg: 'bg-blue-50', 
+    border: 'border-blue-100',
+    ring: 'ring-blue-200',
+    label: '交通'
+  },
+  shopping: { 
+    icon: <ShoppingBag className="w-4 h-4" />, 
+    color: 'text-pink-700', 
+    bg: 'bg-pink-50', 
+    border: 'border-pink-100',
+    ring: 'ring-pink-200',
+    label: '購物'
+  },
+  accommodation: { 
+    icon: <Bed className="w-4 h-4" />, 
+    color: 'text-indigo-700', 
+    bg: 'bg-indigo-50', 
+    border: 'border-indigo-100',
+    ring: 'ring-indigo-200',
+    label: '住宿'
+  },
+  other: { 
+    icon: <MapPin className="w-4 h-4" />, 
+    color: 'text-gray-700', 
+    bg: 'bg-gray-100', 
+    border: 'border-gray-200',
+    ring: 'ring-gray-300',
+    label: '其他'
+  }
+};
 
 const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset }) => {
   
@@ -59,36 +111,50 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
                 {/* Activities Content - Full Width */}
                 <div className="p-6 md:p-8 space-y-8 relative">
                     {/* Timeline Line */}
-                    <div className="absolute left-8 md:left-10 top-8 bottom-8 w-0.5 bg-emerald-100"></div>
+                    <div className="absolute left-8 md:left-10 top-8 bottom-8 w-0.5 bg-gray-200"></div>
 
-                    {day.activities.map((act: Activity, idx) => (
-                        <div key={idx} className="relative pl-10 md:pl-12 group">
-                            {/* Timeline Dot */}
-                            <div className="absolute left-2 md:left-4 top-1.5 w-4 h-4 rounded-full bg-emerald-200 ring-4 ring-white group-hover:bg-emerald-500 transition-colors"></div>
-                            
-                            <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-3 mb-2">
-                                <span className="text-sm font-bold text-emerald-600 font-mono shrink-0 flex items-center bg-emerald-50 px-2 py-0.5 rounded">
-                                    <Clock className="w-3 h-3 mr-1" />
-                                    {act.time}
-                                </span>
-                                <h4 className="text-xl font-bold text-gray-800">{act.activity}</h4>
-                            </div>
-                            
-                            <div className="flex items-start text-sm text-gray-500 mb-3">
-                                <MapPin className="w-3.5 h-3.5 mt-0.5 mr-1 shrink-0 text-red-400" />
-                                {act.location}
-                            </div>
-                            
-                            <p className="text-gray-600 text-sm leading-relaxed bg-gray-50/80 p-4 rounded-xl border border-gray-100 group-hover:bg-emerald-50/30 transition-colors">
-                                {act.description}
-                            </p>
-                            {act.costEstimate && (
-                                <div className="mt-1 text-xs text-gray-400 text-right">
-                                預算: {act.costEstimate}
-                                </div>
-                            )}
-                        </div>
-                    ))}
+                    {day.activities.map((act: Activity, idx) => {
+                        const styleKey = act.type || 'other';
+                        const style = ACTIVITY_STYLES[styleKey] || ACTIVITY_STYLES['other'];
+
+                        return (
+                          <div key={idx} className="relative pl-10 md:pl-12 group">
+                              {/* Timeline Dot (Visualized by Type) */}
+                              <div className={`absolute left-2 md:left-4 top-2 w-4 h-4 rounded-full bg-white ring-[3px] ${style.ring} group-hover:scale-110 transition-transform`}>
+                                <div className={`w-full h-full rounded-full opacity-60 ${style.bg.replace('bg-', 'bg-')}`}></div>
+                              </div>
+                              
+                              {/* Header: Time & Activity Name */}
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                                  {/* Time Badge with Type Icon */}
+                                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-bold font-mono border ${style.bg} ${style.color} ${style.border}`}>
+                                      {style.icon}
+                                      {act.time}
+                                  </span>
+                                  <h4 className="text-xl font-bold text-gray-800">{act.activity}</h4>
+                              </div>
+                              
+                              <div className="flex items-start text-sm text-gray-500 mb-3 ml-1">
+                                  <MapPin className="w-3.5 h-3.5 mt-0.5 mr-1 shrink-0 text-red-400" />
+                                  {act.location}
+                              </div>
+                              
+                              {/* Description Card */}
+                              <div className={`p-4 rounded-xl border ${style.bg} ${style.border} bg-opacity-40 group-hover:bg-opacity-70 transition-colors`}>
+                                <p className="text-gray-700 text-sm leading-relaxed">
+                                    {act.description}
+                                </p>
+                                {act.costEstimate && (
+                                    <div className="mt-2 pt-2 border-t border-gray-200/50 text-xs text-gray-500 font-medium text-right flex justify-end items-center gap-1">
+                                      <span className="bg-white/50 px-2 py-0.5 rounded">
+                                        預算: {act.costEstimate}
+                                      </span>
+                                    </div>
+                                )}
+                              </div>
+                          </div>
+                        );
+                    })}
                 </div>
               </div>
             );

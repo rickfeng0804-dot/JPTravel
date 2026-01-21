@@ -6,8 +6,8 @@ import { generateItinerary } from './services/geminiService';
 import { TripFormData, ItineraryResult, AppState } from './types';
 import { CloudSun } from 'lucide-react';
 
-// 更新 Logo 為使用者上傳的照片 (請確認根目錄有名為 headmaster.jpg 的檔案)
-const LOGO_IMAGE_URL = "./headmaster.jpg";
+// 更新 Logo 為 AI 科技化機器人圖示
+const LOGO_IMAGE_URL = "https://cdn-icons-png.flaticon.com/512/4712/4712109.png";
 // 飛機圖示 (使用卡通風格飛機模擬旅遊氛圍)
 const PLANE_IMAGE_URL = "https://cdn-icons-png.flaticon.com/512/2200/2200326.png"; 
 
@@ -66,7 +66,7 @@ const App: React.FC = () => {
         <header className="flex justify-center mb-12">
           <div className="flex items-center gap-3 cursor-pointer group" onClick={resetApp}>
             {/* 更新 Logo 容器樣式：移除 p-1，加粗邊框，讓照片滿版顯示 */}
-            <div className="relative w-20 h-20 rounded-full overflow-hidden shadow-lg border-4 border-white rotate-3 group-hover:rotate-6 transition-transform z-10 bg-white">
+            <div className="relative w-24 h-24 rounded-full overflow-hidden shadow-lg border-4 border-white rotate-3 group-hover:rotate-6 transition-transform z-10 bg-white">
               <img 
                 src={LOGO_IMAGE_URL} 
                 alt="園長 Logo" 

@@ -40,6 +40,13 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
     4. 請提供一個吸引人的標題、簡短的行程摘要。
     5. 每日行程需包含時間、具體地點名稱、活動說明及預算估算。
     6. **請額外提供一份「必買土特產及禮品清單」**，根據目的地與使用者需求推薦5-8項商品。
+    7. **每個活動請標記類型 (type)**，只能是以下之一：
+       - 'sightseeing': 觀光景點、參觀
+       - 'food': 用餐、咖啡廳、小吃
+       - 'transport': 交通移動、搭車、飛機
+       - 'shopping': 購物、逛街
+       - 'accommodation': 飯店入住、休息
+       - 'other': 其他
   `;
 
   const response = await ai.models.generateContent({
@@ -68,9 +75,14 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
                       activity: { type: Type.STRING, description: "活動或地點名稱 (繁體中文)" },
                       description: { type: Type.STRING, description: "活動內容、實用建議 (繁體中文)" },
                       location: { type: Type.STRING, description: "具體地點/區域 (繁體中文)" },
-                      costEstimate: { type: Type.STRING, description: "預估費用 (例如：500 TWD)" }
+                      costEstimate: { type: Type.STRING, description: "預估費用 (例如：500 TWD)" },
+                      type: { 
+                        type: Type.STRING, 
+                        description: "活動類型",
+                        enum: ["sightseeing", "food", "transport", "shopping", "accommodation", "other"]
+                      }
                     },
-                    required: ["time", "activity", "description", "location"]
+                    required: ["time", "activity", "description", "location", "type"]
                   }
                 }
               },

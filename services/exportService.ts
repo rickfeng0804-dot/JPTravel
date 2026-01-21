@@ -20,7 +20,16 @@ export const exportItineraryToExcel = (itinerary: ItineraryResult) => {
     itineraryRows.push({});
   });
 
-  const itineraryWorksheet = XLSX.utils.json_to_sheet(itineraryRows);
+  // Start the table data from row 5 (A5) to make room for title and summary
+  const itineraryWorksheet = XLSX.utils.json_to_sheet(itineraryRows, { origin: "A5" });
+  
+  // Add Title and Summary at the top (A1 and A2)
+  XLSX.utils.sheet_add_aoa(itineraryWorksheet, [
+    ["行程標題", itinerary.title],
+    ["行程摘要", itinerary.summary],
+    [], // Spacer
+    []  // Spacer
+  ], { origin: "A1" });
   
   // Set column widths for Itinerary
   const wscolsItinerary = [
@@ -70,7 +79,7 @@ export const exportItineraryToExcel = (itinerary: ItineraryResult) => {
   
   // Generate filename based on the itinerary title
   const safeTitle = itinerary.title.replace(/[^\w\s\u4e00-\u9fa5]/gi, '_').trim();
-  const fileName = `GhibliTrip_${safeTitle}.xlsx`;
+  const fileName = `JapanTrip_${safeTitle}.xlsx`;
 
   // Write and trigger download
   XLSX.writeFile(workbook, fileName);
