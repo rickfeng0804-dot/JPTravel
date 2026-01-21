@@ -49,6 +49,7 @@ export interface FoodItem {
 export interface ItineraryResult {
   title: string;
   summary: string;
+  destination?: string; // Added for map generation context
   days: DayPlan[];
   recommendedSouvenirs: SouvenirItem[];
   recommendedFood: FoodItem[];

@@ -134,5 +134,94 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
   const text = response.text;
   if (!text) throw new Error("No itinerary generated.");
   
-  return JSON.parse(text) as ItineraryResult;
+  const result = JSON.parse(text) as ItineraryResult;
+  // Inject the user's input destination into the result for later use (e.g., map generation)
+  result.destination = formData.destination;
+  
+  return result;
+};
+
+/**
+ * Generates a Studio Ghibli style illustration for a specific activity using gemini-2.5-flash-image.
+ */
+export const generateActivityIllustration = async (activity: string, location: string, description: string): Promise<string> => {
+  const prompt = `
+    Create a Studio Ghibli style anime illustration (Hayao Miyazaki style).
+    Subject: The place "${activity}" located at "${location}".
+    Mood: Peaceful, magical, nostalgic, warm sunlight, fluffy clouds, lush greenery or detailed building.
+    Details: Hand-painted watercolor background texture.
+    Context from itinerary: ${description}.
+    Ensure the image is scenic and has the distinct Ghibli aesthetic. No text in the image.
+  `;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: {
+      parts: [{ text: prompt }]
+    },
+    config: {
+      imageConfig: {
+        aspectRatio: "16:9",
+      }
+    }
+  });
+
+  for (const part of response.candidates?.[0]?.content?.parts || []) {
+    if (part.inlineData) {
+      return `data:image/png;base64,${part.inlineData.data}`;
+    }
+  }
+  
+  throw new Error("Failed to generate image");
+};
+
+/**
+ * Generates a Studio Ghibli style travel map for a specific day.
+ */
+export const generateDayMap = async (day: number, theme: string, activities: string[], destination: string): Promise<string> => {
+  // Construct a route string from the main activities
+  const routeDescription = activities.join(' -> ');
+
+  const prompt = `
+    Create a charming, hand-drawn illustrated travel guide map for a specific day trip in ${destination}.
+    
+    **Trip Context:**
+    - **Day Theme:** "${theme}" (Please strongly reflect this mood in the map's colors, icons, and decorations).
+    - **Key Locations:** ${routeDescription}.
+
+    **Artistic Style:**
+    - **Style:** Studio Ghibli background art style (Hayao Miyazaki) mixed with a cute travel journal aesthetic.
+    - **Technique:** Watercolor textures, soft pastel palette, warm sunlight, lush greenery.
+    - **Perspective:** Isometric or top-down "fantasy map" view.
+    - **Vibe:** Magical, nostalgic, whimsical, and inviting.
+
+    **Map Composition (CRITICAL):**
+    - **Landmarks:** Draw cute, miniature, detailed representations of the key locations listed, distributed across the map.
+    - **Path:** **IMPORTANT:** Connect these locations in the exact order (${routeDescription}) using a **visible dotted line** or a **playful trail of footprints**. The path should meander through the map to show the journey's flow.
+    - **Environment:** Fill empty spaces with elements relevant to ${destination} (e.g., local flora, terrain, specific cultural symbols).
+    - **Decorations:** If the theme is "Food", include tiny food illustrations. If "Nature", include trees/flowers. If "History", include torii gates or old buildings.
+    - **Labels:** You may include artistic, hand-written style text for main locations if it fits the style, but prioritized visual storytelling.
+    
+    The image should look like a beautiful page from a traveler's sketchbook capturing the essence of the day.
+  `;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: {
+      parts: [{ text: prompt }]
+    },
+    config: {
+      imageConfig: {
+        aspectRatio: "4:3", // A bit taller for a map view
+      }
+    }
+  });
+
+  for (const part of response.candidates?.[0]?.content?.parts || []) {
+    if (part.inlineData) {
+      return `data:image/png;base64,${part.inlineData.data}`;
+    }
+  }
+  
+  throw new Error("Failed to generate map");
 };
