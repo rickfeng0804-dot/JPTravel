@@ -17,8 +17,8 @@ const MAP_IMAGE_URL = "https://cdn-icons-png.flaticon.com/512/805/805368.png";
 const HeroInput: React.FC<HeroInputProps> = ({ onSubmit, isLoading }) => {
   const [formData, setFormData] = useState<TripFormData>({
     destination: '',
-    days: 3,
-    travelers: 2,
+    days: 5,
+    travelers: 3,
     startDate: new Date().toISOString().split('T')[0],
     interests: '',
     foodPreferences: '',
