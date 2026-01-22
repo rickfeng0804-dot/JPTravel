@@ -34,7 +34,7 @@ const ActivityIllustration: React.FC<ActivityIllustrationProps> = ({ activity, l
         <img src={imageUrl} alt={activity} className="w-full h-48 md:h-64 object-cover transition-transform duration-700 group-hover:scale-105" />
         <div className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded backdrop-blur-sm flex items-center gap-1">
            <Sparkles className="w-3 h-3 text-yellow-300" />
-           AI 吉卜力風格插畫
+           AI 日式漫畫風格插畫
         </div>
       </div>
     );
@@ -45,7 +45,7 @@ const ActivityIllustration: React.FC<ActivityIllustrationProps> = ({ activity, l
         {isLoading ? (
             <div className="w-full h-32 md:h-48 bg-emerald-50/50 rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-emerald-200 text-emerald-600 animate-pulse">
                 <Loader2 className="w-8 h-8 animate-spin mb-2" />
-                <span className="text-sm font-medium">正在繪製吉卜力風格插畫...</span>
+                <span className="text-sm font-medium">正在繪製日式漫畫風格插畫...</span>
             </div>
         ) : error ? (
              <div className="text-red-500 text-sm flex items-center mt-2 bg-red-50 p-2 rounded-lg border border-red-100">
@@ -58,7 +58,7 @@ const ActivityIllustration: React.FC<ActivityIllustrationProps> = ({ activity, l
                 className="group flex items-center gap-2 px-4 py-2 bg-white hover:bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium transition-all border border-emerald-200 shadow-sm hover:shadow-md hover:border-emerald-300 w-full md:w-auto justify-center md:justify-start"
             >
                 <ImageIcon className="w-4 h-4 group-hover:scale-110 transition-transform text-emerald-500" />
-                <span>生成吉卜力風格插圖</span>
+                <span>生成日式漫畫風格插圖</span>
             </button>
         )}
     </div>
