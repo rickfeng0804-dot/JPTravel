@@ -1,3 +1,10 @@
+
+export interface DayPreference {
+  day: number;
+  location: string; // 指定當天主要地點
+  accommodation: string; // 指定當天住宿飯店或區域
+}
+
 export interface TripFormData {
   destination: string;
   days: number;
@@ -5,7 +12,7 @@ export interface TripFormData {
   startDate: string;
   interests: string;
   foodPreferences: string;
-  accommodation: string;
+  accommodation: string; // 整體風格
   transportation: string;
   // 新增航班資訊
   departureTime: string;
@@ -13,6 +20,8 @@ export interface TripFormData {
   returnTime: string;
   // 新增購物清單需求
   souvenirPreferences: string;
+  // 新增每日詳細偏好
+  dayPreferences: DayPreference[];
 }
 
 export type ActivityType = 'sightseeing' | 'food' | 'transport' | 'shopping' | 'accommodation' | 'other';

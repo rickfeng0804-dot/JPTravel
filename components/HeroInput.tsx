@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { TripFormData } from '../types';
-import { Calendar, MapPin, Users, Clock, Heart, Coffee, Train, Home, PlaneTakeoff, PlaneLanding, Timer, ShoppingBag } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { TripFormData, DayPreference } from '../types';
+import { Calendar, MapPin, Users, Clock, Heart, Coffee, Train, Home, PlaneTakeoff, PlaneLanding, Timer, ShoppingBag, Map } from 'lucide-react';
 
 interface HeroInputProps {
   onSubmit: (data: TripFormData) => void;
@@ -27,12 +27,45 @@ const HeroInput: React.FC<HeroInputProps> = ({ onSubmit, isLoading }) => {
     departureTime: '09:00',
     flightDuration: '3.5',
     returnTime: '18:00',
-    souvenirPreferences: ''
+    souvenirPreferences: '',
+    dayPreferences: Array.from({ length: 5 }, (_, i) => ({ day: i + 1, location: '', accommodation: '' }))
   });
+
+  // 當天數改變時，更新 dayPreferences 陣列長度
+  useEffect(() => {
+    setFormData(prev => {
+      const currentLength = prev.dayPreferences.length;
+      const newDays = prev.days;
+
+      if (currentLength === newDays) return prev;
+
+      let newPreferences = [...prev.dayPreferences];
+
+      if (newDays > currentLength) {
+        // 增加天數
+        for (let i = currentLength; i < newDays; i++) {
+          newPreferences.push({ day: i + 1, location: '', accommodation: '' });
+        }
+      } else {
+        // 減少天數
+        newPreferences = newPreferences.slice(0, newDays);
+      }
+
+      return { ...prev, dayPreferences: newPreferences };
+    });
+  }, [formData.days]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleDayPreferenceChange = (index: number, field: 'location' | 'accommodation', value: string) => {
+    setFormData(prev => {
+      const newPreferences = [...prev.dayPreferences];
+      newPreferences[index] = { ...newPreferences[index], [field]: value };
+      return { ...prev, dayPreferences: newPreferences };
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -177,6 +210,45 @@ const HeroInput: React.FC<HeroInputProps> = ({ onSubmit, isLoading }) => {
             </div>
           </div>
 
+          {/* 每日行程細節設定 (New Feature) */}
+          <div className="bg-gray-50/80 p-5 rounded-2xl border border-gray-200">
+            <h3 className="text-gray-800 font-bold mb-3 flex items-center text-sm">
+              <Map className="w-4 h-4 mr-2 text-emerald-600" />
+              每日住宿與重點 (選填)
+            </h3>
+            <p className="text-xs text-gray-500 mb-4">您可以指定每一天希望前往的區域與入住的飯店(或區域)。AI 會依照此順序規劃。</p>
+            
+            <div className="space-y-3 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+              {formData.dayPreferences.map((pref, index) => (
+                <div key={index} className="flex flex-col md:flex-row gap-3 items-start md:items-center bg-white p-3 rounded-lg border border-gray-100 shadow-sm">
+                   <div className="text-emerald-700 font-bold text-sm w-16 shrink-0 pt-2 md:pt-0">Day {pref.day}</div>
+                   
+                   <div className="flex-1 w-full relative">
+                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                     <input
+                       type="text"
+                       placeholder="主要地點 (如: 淺草, 清水寺)"
+                       value={pref.location}
+                       onChange={(e) => handleDayPreferenceChange(index, 'location', e.target.value)}
+                       className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-gray-200 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200 outline-none"
+                     />
+                   </div>
+
+                   <div className="flex-1 w-full relative">
+                     <Home className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                     <input
+                       type="text"
+                       placeholder="住宿飯店或區域"
+                       value={pref.accommodation}
+                       onChange={(e) => handleDayPreferenceChange(index, 'accommodation', e.target.value)}
+                       className="w-full pl-8 pr-3 py-2 text-sm rounded-lg border border-gray-200 focus:border-emerald-400 focus:ring-1 focus:ring-emerald-200 outline-none"
+                     />
+                   </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* 航班資訊區塊 */}
           <div className="bg-emerald-50/50 p-4 rounded-2xl border border-emerald-100">
             <h3 className="text-emerald-800 font-bold mb-4 flex items-center text-sm">
@@ -291,7 +363,7 @@ const HeroInput: React.FC<HeroInputProps> = ({ onSubmit, isLoading }) => {
             <div className="space-y-2">
               <label className="flex items-center text-gray-700 font-semibold text-sm">
                 <Home className="w-4 h-4 mr-2 text-emerald-500" />
-                住宿風格
+                住宿風格 (整體)
               </label>
                <select
                 name="accommodation"

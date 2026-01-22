@@ -8,6 +8,23 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
  * Generates the text-based itinerary using Gemini 3 Pro.
  */
 export const generateItinerary = async (formData: TripFormData): Promise<ItineraryResult> => {
+  // Construct a string detailing day-by-day preferences if they exist
+  let dayPreferencesString = "";
+  if (formData.dayPreferences && formData.dayPreferences.length > 0) {
+    const details = formData.dayPreferences
+      .filter(p => p.location.trim() !== "" || p.accommodation.trim() !== "")
+      .map(p => {
+        const loc = p.location ? `指定地點: ${p.location}` : "";
+        const acc = p.accommodation ? `指定住宿: ${p.accommodation}` : "";
+        return `    - Day ${p.day}: ${loc} ${acc}`;
+      })
+      .join("\n");
+    
+    if (details) {
+      dayPreferencesString = `\n    **每日詳細指定 (必須嚴格遵守):**\n${details}`;
+    }
+  }
+
   const prompt = `
     請以「資深日本在地導遊」的身分，為前往 ${formData.destination} 的旅行制定一份深度且道地的行程表。
     
@@ -19,6 +36,7 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
     - 美食偏好：${formData.foodPreferences}
     - 住宿風格：${formData.accommodation}
     - 交通方式：${formData.transportation}
+    ${dayPreferencesString}
     
     **航班與時間限制 (極重要)：**
     - 出發航班時間：${formData.departureTime}
@@ -28,7 +46,9 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
     **核心規劃重點：**
     1. **第一天行程**：請計算預計抵達時間。第一天的活動請務必在「預計抵達並完成入境後」才開始。
     2. **最後一天行程**：所有活動必須在回程航班起飛前「3小時」結束。
-    3. **所有輸出內容必須使用「繁體中文 (Traditional Chinese)」**。
+    3. **住宿建議**：若使用者在「每日詳細指定」中有指定住宿，請優先採納；若無，請根據「住宿風格」在行程中建議具體的飯店或住宿區域。
+    4. **行程順暢度**：請確保每日行程的地理位置順暢，不要來回奔波。
+    5. **所有輸出內容必須使用「繁體中文 (Traditional Chinese)」**。
   `;
 
   const response = await ai.models.generateContent({
