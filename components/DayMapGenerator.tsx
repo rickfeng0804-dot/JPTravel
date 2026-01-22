@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { generateTransportationMap } from '../services/geminiService';
-import { Train, Camera, Upload, X, Plus, Trash2, RefreshCw, Download, Loader2 } from 'lucide-react';
+import { Train, RefreshCw, Download, Loader2, Map, ExternalLink, QrCode } from 'lucide-react';
 import { DayPlan } from '../types';
 
 interface DayMapGeneratorProps {
@@ -8,13 +8,10 @@ interface DayMapGeneratorProps {
   destination: string;
 }
 
-type MapType = 'scenic' | 'transport';
+type MapType = 'google' | 'transport';
 
 const DayMapGenerator: React.FC<DayMapGeneratorProps> = ({ dayPlan, destination }) => {
-  const [activeTab, setActiveTab] = useState<MapType>('scenic');
-  
-  // State for Uploaded Images (Scenic)
-  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<MapType>('google');
 
   // State for Transport Map (AI Generated)
   const [transportMapUrl, setTransportMapUrl] = useState<string | null>(null);
@@ -23,36 +20,36 @@ const DayMapGenerator: React.FC<DayMapGeneratorProps> = ({ dayPlan, destination 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Handle Image Upload
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files) as File[];
-      const remainingSlots = 8 - uploadedImages.length;
-      
-      if (files.length > remainingSlots) {
-        alert(`最多只能上傳 8 張照片。您目前只能再上傳 ${remainingSlots} 張。`);
-      }
+  // --- Google Maps Logic ---
+  const getGoogleMapsData = () => {
+    // Filter activities that have meaningful locations
+    const stops = dayPlan.activities
+      .filter(a => 
+        ['sightseeing', 'food', 'shopping', 'accommodation'].includes(a.type) && 
+        a.location && 
+        a.location !== '無' && 
+        a.location !== 'TBD'
+      )
+      .map(a => a.location);
 
-      const filesToProcess = files.slice(0, remainingSlots);
+    // Remove duplicates consecutively (e.g., stay at same place)
+    const uniqueStops = stops.filter((item, pos, arr) => !pos || item !== arr[pos - 1]);
 
-      filesToProcess.forEach(file => {
-        if (!file.type.startsWith('image/')) return;
+    if (uniqueStops.length < 1) return null;
 
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setUploadedImages(prev => [...prev, reader.result as string]);
-        };
-        reader.readAsDataURL(file);
-      });
-      
-      // Reset input
-      e.target.value = '';
-    }
+    const origin = encodeURIComponent(uniqueStops[0]);
+    const destinationLoc = encodeURIComponent(uniqueStops[uniqueStops.length - 1]);
+    const waypoints = uniqueStops.slice(1, -1).map(p => encodeURIComponent(p)).join('|');
+
+    const mapUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destinationLoc}&waypoints=${waypoints}&travelmode=transit`;
+    
+    // Generate QR Code URL (using a free API for simplicity)
+    const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(mapUrl)}`;
+
+    return { stops: uniqueStops, mapUrl, qrCodeUrl };
   };
 
-  const removeImage = (indexToRemove: number) => {
-    setUploadedImages(prev => prev.filter((_, index) => index !== indexToRemove));
-  };
+  const googleData = getGoogleMapsData();
 
   // Handle AI Transport Map Generation
   const handleGenerateTransportMap = async () => {
@@ -91,18 +88,18 @@ const DayMapGenerator: React.FC<DayMapGeneratorProps> = ({ dayPlan, destination 
     <div className="mt-6 border-t border-emerald-100 pt-6">
       
       {/* Tabs */}
-      <div className="flex justify-center mb-6">
-        <div className="bg-emerald-50/50 p-1 rounded-full border border-emerald-100 flex gap-1">
-          <button
-            onClick={() => setActiveTab('scenic')}
+      <div className="flex justify-center mb-6 overflow-x-auto">
+        <div className="bg-emerald-50/50 p-1 rounded-full border border-emerald-100 flex gap-1 min-w-max">
+           <button
+            onClick={() => setActiveTab('google')}
             className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all ${
-              activeTab === 'scenic' 
-                ? 'bg-emerald-600 text-white shadow-md' 
-                : 'text-emerald-700 hover:bg-emerald-100'
+              activeTab === 'google' 
+                ? 'bg-red-500 text-white shadow-md' 
+                : 'text-red-600 hover:bg-red-50'
             }`}
           >
-            <Camera className="w-4 h-4" />
-            上傳景點照片 ({uploadedImages.length}/8)
+            <Map className="w-4 h-4" />
+            Google Maps 路線
           </button>
           <button
             onClick={() => setActiveTab('transport')}
@@ -113,72 +110,68 @@ const DayMapGenerator: React.FC<DayMapGeneratorProps> = ({ dayPlan, destination 
             }`}
           >
             <Train className="w-4 h-4" />
-            交通路線地圖
+            AI 路線示意圖
           </button>
         </div>
       </div>
 
-      {/* --- SCENIC PHOTOS TAB (UPLOAD) --- */}
-      {activeTab === 'scenic' && (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-emerald-100 animate-fade-in">
-          <div className="flex justify-between items-center mb-4">
-             <div>
-               <h4 className="font-bold text-emerald-800 flex items-center gap-2">
-                  <Camera className="w-5 h-5 text-emerald-600" />
-                  Day {dayPlan.day} 旅遊回憶錄
-               </h4>
-               <p className="text-sm text-gray-500 mt-1">上傳您的旅行照片，記錄美好時刻。</p>
-             </div>
-             
-             {uploadedImages.length > 0 && (
-               <button 
-                  onClick={() => setUploadedImages([])}
-                  className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1 px-3 py-1 rounded-lg hover:bg-red-50 transition-colors"
-               >
-                 <Trash2 className="w-3.5 h-3.5" />
-                 清空
-               </button>
-             )}
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {/* Render Uploaded Images */}
-            {uploadedImages.map((img, idx) => (
-              <div key={idx} className="group relative aspect-square rounded-xl overflow-hidden shadow-sm border border-gray-100">
-                <img src={img} alt={`Upload ${idx}`} className="w-full h-full object-cover" />
-                <button 
-                  onClick={() => removeImage(idx)}
-                  className="absolute top-2 right-2 bg-black/50 hover:bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-all transform scale-90 group-hover:scale-100"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
+      {/* --- GOOGLE MAPS TAB --- */}
+      {activeTab === 'google' && (
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-red-100 animate-fade-in">
+           <div className="flex flex-col md:flex-row gap-8">
+              {/* Route List */}
+              <div className="flex-1">
+                 <h4 className="font-bold text-gray-800 flex items-center gap-2 mb-4 text-lg">
+                    <Map className="w-5 h-5 text-red-500" />
+                    Day {dayPlan.day} 導航路線
+                 </h4>
+                 
+                 {googleData ? (
+                   <div className="relative pl-4 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-200">
+                      {googleData.stops.map((stop, idx) => (
+                        <div key={idx} className="relative flex items-center gap-3">
+                           <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center bg-white z-10 ${idx === 0 || idx === googleData.stops.length - 1 ? 'border-red-500 text-red-500' : 'border-gray-400 text-gray-400'}`}>
+                              <span className="text-[10px] font-bold">{idx + 1}</span>
+                           </div>
+                           <div className="text-sm font-medium text-gray-700 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 w-full">
+                              {stop}
+                           </div>
+                        </div>
+                      ))}
+                   </div>
+                 ) : (
+                   <p className="text-gray-500 text-sm">無法取得足夠的地點資訊來建立路線。</p>
+                 )}
               </div>
-            ))}
 
-            {/* Upload Button (Show if less than 8) */}
-            {uploadedImages.length < 8 && (
-              <label className="cursor-pointer aspect-square rounded-xl border-2 border-dashed border-emerald-200 bg-emerald-50/30 hover:bg-emerald-50 transition-colors flex flex-col items-center justify-center text-emerald-600 hover:text-emerald-700 group">
-                <div className="p-3 bg-emerald-100 rounded-full mb-2 group-hover:scale-110 transition-transform">
-                  <Plus className="w-6 h-6" />
-                </div>
-                <span className="text-xs font-bold">新增照片</span>
-                <span className="text-[10px] opacity-60 mt-0.5">{uploadedImages.length}/8</span>
-                <input 
-                  type="file" 
-                  accept="image/*" 
-                  multiple 
-                  className="hidden" 
-                  onChange={handleImageUpload}
-                />
-              </label>
-            )}
-          </div>
-          
-          {uploadedImages.length === 0 && (
-            <div className="text-center py-8 text-gray-400 text-sm">
-              尚未上傳照片，點擊上方區塊開始上傳
-            </div>
-          )}
+              {/* Action / QR Code */}
+              <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 rounded-xl p-6 border border-gray-100">
+                 {googleData ? (
+                   <>
+                      <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200 mb-4">
+                        <img src={googleData.qrCodeUrl} alt="Google Maps Route QR" className="w-32 h-32 md:w-40 md:h-40" />
+                      </div>
+                      <p className="text-xs text-gray-500 mb-4 text-center">
+                        手機掃描 QR Code <br/> 直接在 Google Maps App 開啟路線
+                      </p>
+                      <a 
+                        href={googleData.mapUrl} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 px-6 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors shadow-lg hover:shadow-red-200 w-full md:w-auto justify-center"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        開啟 Google Maps 導航
+                      </a>
+                   </>
+                 ) : (
+                   <div className="text-center text-gray-400">
+                     <Map className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                     尚無路線資料
+                   </div>
+                 )}
+              </div>
+           </div>
         </div>
       )}
 
