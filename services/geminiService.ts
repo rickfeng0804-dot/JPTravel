@@ -167,23 +167,6 @@ export const generateDayMap = async (day: number, theme: string, activities: str
 };
 
 /**
- * Generates a focused transportation route map.
- */
-export const generateTransportationMap = async (day: number, theme: string, activities: string[], destination: string, variant: number = 0): Promise<string> => {
-  const prompt = `Minimalist illustrated transit map for ${destination}: ${activities.join(' to ')}. Clean lines, icons.`;
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-image',
-    contents: { parts: [{ text: prompt }] },
-    config: { imageConfig: { aspectRatio: "4:3" } }
-  });
-
-  for (const part of response.candidates?.[0]?.content?.parts || []) {
-    if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
-  }
-  throw new Error("Failed to generate transportation map");
-};
-
-/**
  * Generates a beautiful vertical (9:16) schedule poster image for a day.
  */
 export const generateDayScheduleImage = async (dayPlan: DayPlan, destination: string): Promise<string> => {

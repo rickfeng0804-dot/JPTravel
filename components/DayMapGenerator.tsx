@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { generateTransportationMap } from '../services/geminiService';
-import { Train, RefreshCw, Download, Loader2, Map, ExternalLink, QrCode } from 'lucide-react';
+import { Train, Map, ExternalLink, Info } from 'lucide-react';
 import { DayPlan } from '../types';
 
 interface DayMapGeneratorProps {
@@ -8,17 +7,50 @@ interface DayMapGeneratorProps {
   destination: string;
 }
 
-type MapType = 'google' | 'transport';
+type MapType = 'google' | 'official';
+
+// 定義各地區官方地圖資訊
+const REGION_MAPS: Record<string, { name: string, url: string, keywords: string[], color: string }> = {
+  tokyo: {
+    name: 'JR 東日本 - 東京近郊路線圖',
+    url: 'https://www.jreast.co.jp/multi/zh-CHT/routemaps/pdf/map_tokyo.pdf',
+    keywords: ['東京', '橫濱', '千葉', '鎌倉', '箱根', '輕井澤', '迪士尼', 'Tokyo', 'Yokohama', 'Kamakura', 'Hakone'],
+    color: 'bg-green-600'
+  },
+  kansai: {
+    name: 'JR 西日本 - 關西地區路線圖',
+    url: 'https://www.westjr.co.jp/global/tc/timetable/pdf/map_c_kansai.pdf',
+    keywords: ['大阪', '京都', '奈良', '神戶', '宇治', '姬路', '和歌山', 'Osaka', 'Kyoto', 'Nara', 'Kobe', '環球影城'],
+    color: 'bg-blue-600'
+  },
+  hokkaido: {
+    name: 'JR 北海道 - 鐵路路線圖',
+    url: 'https://www.jrhokkaido.co.jp/global/pdf/cn/route_map.pdf',
+    keywords: ['北海道', '札幌', '函館', '小樽', '富良野', '旭川', 'Hokkaido', 'Sapporo'],
+    color: 'bg-emerald-500'
+  },
+  kyushu: {
+    name: 'JR 九州 - 鐵路路線圖',
+    url: 'https://www.jrkyushu.co.jp/chinese/pdf/work_03.pdf',
+    keywords: ['九州', '福岡', '博多', '由布院', '別府', '熊本', '長崎', 'Kyushu', 'Fukuoka', 'Hakata'],
+    color: 'bg-red-600'
+  },
+  central: {
+    name: 'JR 東海 - 路線圖',
+    url: 'https://railway.jr-central.co.jp/route-map/_pdf/map_whole.pdf',
+    keywords: ['名古屋', '高山', '白川鄉', '合掌村', 'Nagoya', 'Takayama'],
+    color: 'bg-orange-500'
+  },
+  japan: {
+    name: 'Japan Rail Pass 全國鐵路圖',
+    url: 'https://japanrailpass.net/pdf/network_map_zh.pdf',
+    keywords: [],
+    color: 'bg-gray-600'
+  }
+};
 
 const DayMapGenerator: React.FC<DayMapGeneratorProps> = ({ dayPlan, destination }) => {
   const [activeTab, setActiveTab] = useState<MapType>('google');
-
-  // State for Transport Map (AI Generated)
-  const [transportMapUrl, setTransportMapUrl] = useState<string | null>(null);
-  const [transportVariant, setTransportVariant] = useState(0);
-  
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   // --- Google Maps Logic ---
   const getGoogleMapsData = () => {
@@ -51,38 +83,24 @@ const DayMapGenerator: React.FC<DayMapGeneratorProps> = ({ dayPlan, destination 
 
   const googleData = getGoogleMapsData();
 
-  // Handle AI Transport Map Generation
-  const handleGenerateTransportMap = async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const mainActivities = dayPlan.activities
-        .filter(a => ['sightseeing', 'food', 'shopping', 'transport'].includes(a.type))
-        .map(a => a.activity);
-      
-      const limitedActivities = mainActivities.slice(0, 5);
-      const newVariant = transportVariant + 1;
-      setTransportVariant(newVariant);
-      
-      const url = await generateTransportationMap(dayPlan.day, dayPlan.theme, limitedActivities, destination, newVariant);
-      setTransportMapUrl(url);
-    } catch (err) {
-      console.error(err);
-      setError("地圖生成失敗，請稍後再試");
-    } finally {
-      setIsLoading(false);
+  // --- Official Map Logic ---
+  const getOfficialMap = () => {
+    const destLower = destination.toLowerCase();
+    
+    // Check specific regions first
+    for (const key in REGION_MAPS) {
+      if (key === 'japan') continue;
+      const mapInfo = REGION_MAPS[key];
+      if (mapInfo.keywords.some(k => destLower.includes(k.toLowerCase()))) {
+        return mapInfo;
+      }
     }
+    
+    // Fallback to general map
+    return REGION_MAPS.japan;
   };
 
-  const handleDownloadTransport = () => {
-    if (!transportMapUrl) return;
-    const link = document.createElement('a');
-    link.href = transportMapUrl;
-    link.download = `Day${dayPlan.day}_TransportMap_${destination}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const officialMap = getOfficialMap();
 
   return (
     <div className="mt-6 border-t border-emerald-100 pt-6">
@@ -102,15 +120,15 @@ const DayMapGenerator: React.FC<DayMapGeneratorProps> = ({ dayPlan, destination 
             Google Maps 路線
           </button>
           <button
-            onClick={() => setActiveTab('transport')}
+            onClick={() => setActiveTab('official')}
             className={`px-4 py-2 rounded-full text-sm font-bold flex items-center gap-2 transition-all ${
-              activeTab === 'transport' 
+              activeTab === 'official' 
                 ? 'bg-blue-600 text-white shadow-md' 
                 : 'text-blue-700 hover:bg-blue-50'
             }`}
           >
             <Train className="w-4 h-4" />
-            AI 路線示意圖
+            官方鐵道路線圖
           </button>
         </div>
       </div>
@@ -175,84 +193,36 @@ const DayMapGenerator: React.FC<DayMapGeneratorProps> = ({ dayPlan, destination 
         </div>
       )}
 
-      {/* --- TRANSPORT MAP TAB (AI GENERATION) --- */}
-      {activeTab === 'transport' && (
+      {/* --- OFFICIAL MAP TAB --- */}
+      {activeTab === 'official' && (
         <div className="animate-fade-in">
-          {!transportMapUrl ? (
-            <div className="flex flex-col items-center justify-center p-6 rounded-2xl border border-dashed bg-blue-50/30 border-blue-200">
-               <h4 className="font-bold mb-2 flex items-center gap-2 text-blue-800">
-                 <Train className="w-5 h-5" />
-                 AI 交通路線圖繪製
-               </h4>
-               <p className="text-sm text-gray-500 mb-4 text-center max-w-sm">
-                 產生今日行程的交通動線示意圖，標示車站與轉乘點，讓移動更清晰。
-               </p>
-               
-               {isLoading ? (
-                 <div className="flex items-center gap-2 px-6 py-3 bg-white rounded-full shadow-sm font-medium text-gray-600">
-                   <Loader2 className="w-5 h-5 animate-spin" />
-                   正在生成中...
-                 </div>
-               ) : (
-                 <button 
-                   onClick={handleGenerateTransportMap}
-                   className="flex items-center gap-2 px-6 py-2.5 text-white rounded-full font-bold shadow-md hover:shadow-lg transition-all active:scale-95 bg-blue-600 hover:bg-blue-700"
-                 >
-                   <Train className="w-5 h-5" />
-                   繪製交通路線圖
-                 </button>
-               )}
-               
-               {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
-            </div>
-          ) : (
-            <div className="bg-white p-4 rounded-2xl shadow-md border border-blue-100 animate-fade-in">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-                 <h4 className="font-bold text-gray-800 flex items-center gap-2">
-                    <Train className="w-5 h-5 text-blue-600" />
-                    Day {dayPlan.day} 交通路線地圖
-                 </h4>
-                 <div className="flex gap-2 w-full sm:w-auto">
-                   <button 
-                     onClick={handleGenerateTransportMap}
-                     disabled={isLoading}
-                     className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                     title="重新生成"
-                   >
-                     <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                     {isLoading ? '處理中' : '重新生成'}
-                   </button>
-                   <button 
-                     onClick={handleDownloadTransport}
-                     disabled={isLoading}
-                     className="flex-1 sm:flex-none justify-center flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors disabled:opacity-50 bg-blue-100 hover:bg-blue-200 text-blue-800"
-                   >
-                     <Download className="w-4 h-4" />
-                     儲存
-                   </button>
-                 </div>
+           <div className="bg-white p-6 rounded-2xl shadow-md border border-blue-100 flex flex-col items-center text-center">
+              <div className={`w-16 h-16 rounded-full ${officialMap.color} flex items-center justify-center mb-4 shadow-lg text-white`}>
+                 <Train className="w-8 h-8" />
               </div>
               
-              <div className="relative rounded-xl overflow-hidden border border-gray-200 shadow-inner group bg-gray-50 min-h-[200px]">
-                {isLoading && (
-                   <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] flex flex-col items-center justify-center z-10 transition-all">
-                      <div className="bg-white p-4 rounded-full shadow-xl">
-                        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-                      </div>
-                      <p className="mt-4 text-gray-800 font-bold bg-white/80 px-3 py-1 rounded-lg">正在為您重新生成...</p>
-                   </div>
-                )}
-                <img 
-                  src={transportMapUrl} 
-                  alt={`Day ${dayPlan.day} Transport Map`} 
-                  className="w-full h-auto object-cover max-h-[500px]" 
-                />
-              </div>
-              <p className="text-xs text-center text-gray-400 mt-2">
-                 * AI 生成地圖僅供視覺參考，非精確導航地圖
+              <h4 className="text-xl font-bold text-gray-800 mb-2">{officialMap.name}</h4>
+              <p className="text-gray-500 text-sm max-w-md mb-6">
+                檢視 {destination} 地區的官方鐵路路線圖 (PDF)，獲取最準確的車站與轉乘資訊，避免 AI 生成地圖的亂碼問題。
               </p>
-            </div>
-          )}
+
+              <div className="flex flex-col w-full max-w-sm gap-3">
+                <a 
+                  href={officialMap.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className={`flex items-center justify-center gap-2 px-6 py-4 text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all ${officialMap.color}`}
+                >
+                  <ExternalLink className="w-5 h-5" />
+                  下載/瀏覽官方路線圖 (PDF)
+                </a>
+              </div>
+              
+              <div className="mt-6 flex items-start gap-2 text-xs text-left bg-blue-50 p-3 rounded-lg text-blue-800 border border-blue-100 max-w-lg">
+                 <Info className="w-4 h-4 shrink-0 mt-0.5" />
+                 <p>此連結將開啟 JR 官方網站提供的最新版路線圖。請注意，部分官方地圖檔案較大，建議在網路良好的環境下開啟。</p>
+              </div>
+           </div>
         </div>
       )}
     </div>
