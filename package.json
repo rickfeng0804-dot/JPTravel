@@ -13,7 +13,8 @@
     "lucide-react": "^0.562.0",
     "@google/genai": "^1.38.0",
     "react-dom": "^19.2.3",
-    "xlsx": "0.18.5"
+    "xlsx": "0.18.5",
+    "leaflet": "1.9.4"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

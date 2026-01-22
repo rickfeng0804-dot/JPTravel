@@ -26,6 +26,11 @@ export interface TripFormData {
 
 export type ActivityType = 'sightseeing' | 'food' | 'transport' | 'shopping' | 'accommodation' | 'other';
 
+export interface GeoCoordinates {
+  lat: number;
+  lng: number;
+}
+
 export interface Activity {
   time: string;
   activity: string;
@@ -33,6 +38,7 @@ export interface Activity {
   location: string;
   costEstimate?: string;
   type: ActivityType;
+  geo?: GeoCoordinates; // 新增座標欄位
 }
 
 export interface DayPlan {
