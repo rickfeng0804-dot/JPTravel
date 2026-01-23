@@ -69,7 +69,7 @@ const App: React.FC = () => {
             <div className="relative w-24 h-24 rounded-full overflow-hidden shadow-lg border-4 border-white rotate-3 group-hover:rotate-6 transition-transform z-10 bg-white">
               <img 
                 src={LOGO_IMAGE_URL} 
-                alt="園長 Logo" 
+                alt="Logo" 
                 className="w-full h-full object-cover"
               />
             </div>
@@ -103,7 +103,7 @@ const App: React.FC = () => {
                   <CloudSun className="w-10 h-10 text-emerald-500 animate-bounce" />
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-emerald-800 mt-8">園長規劃中...</h3>
+              <h3 className="text-2xl font-bold text-emerald-800 mt-8">AI規劃中...</h3>
               <p className="text-gray-500 mt-2">正在為您搜尋最佳路線與私房景點...</p>
             </div>
           )}

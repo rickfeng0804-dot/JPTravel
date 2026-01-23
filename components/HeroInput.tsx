@@ -19,7 +19,7 @@ const HeroInput: React.FC<HeroInputProps> = ({ onSubmit, isLoading }) => {
     destination: '',
     days: 5,
     travelers: 3,
-    startDate: new Date().toISOString().split('T')[0],
+    startDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     interests: '',
     foodPreferences: '',
     accommodation: '',
