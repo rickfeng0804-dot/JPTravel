@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ItineraryResult, DayPlan, Activity, SouvenirItem, FoodItem } from '../types';
-import { MapPin, ArrowLeft, ShoppingBag, Gift, Utensils, Camera, Train, Bed, ChevronDown, ChevronUp, BookOpen, Download, Loader2, Sparkles, Image as ImageIcon, FileSpreadsheet, Map, List, Send, FileText } from 'lucide-react';
+import { MapPin, ArrowLeft, ShoppingBag, Gift, Utensils, Camera, Train, Bed, ChevronDown, ChevronUp, BookOpen, Download, Loader2, Sparkles, Image as ImageIcon, FileSpreadsheet, Map, List, FileText } from 'lucide-react';
 import ActivityIllustration from './ActivityIllustration';
 import DayMapGenerator from './DayMapGenerator';
 import TripMap from './TripMap';
-import { generateDayScheduleImage, generateItineraryCoverImage } from '../services/geminiService';
-import { exportDayItineraryToExcel, exportItineraryToExcel } from '../services/exportService';
+import { generateItineraryCoverImage } from '../services/geminiService';
+import { exportItineraryToExcel } from '../services/exportService';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 
@@ -27,7 +27,6 @@ type ViewMode = 'list' | 'map';
 
 const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset }) => {
   const [isSummaryOpen, setIsSummaryOpen] = useState(true);
-  const [sharingDay, setSharingDay] = useState<number | null>(null);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [isCoverLoading, setIsCoverLoading] = useState(false);
@@ -91,43 +90,6 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
         alert("PDF 產生失敗，請稍後再試。");
     } finally {
         setIsPdfLoading(false);
-    }
-  };
-
-  const handleShareDay = async (dayPlan: DayPlan) => {
-    setSharingDay(dayPlan.day);
-    try {
-      const imageUrl = await generateDayScheduleImage(dayPlan, itinerary.destination || itinerary.title);
-      
-      // Try to use native sharing if available (for mobile "Save to Photos")
-      if (navigator.share && navigator.canShare) {
-        const response = await fetch(imageUrl);
-        const blob = await response.blob();
-        const file = new File([blob], `Day${dayPlan.day}_Itinerary.png`, { type: 'image/png' });
-        
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: `園長揪團 Day ${dayPlan.day}`,
-            text: `Day ${dayPlan.day}: ${dayPlan.theme}`
-          });
-          return;
-        }
-      }
-
-      // Fallback: Trigger download
-      const link = document.createElement('a');
-      link.href = imageUrl;
-      link.download = `Day${dayPlan.day}_${itinerary.destination || 'Japan'}_Schedule.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-    } catch (error) {
-      console.error("Failed to share day:", error);
-      alert("生成分享圖片失敗，請稍後再試。");
-    } finally {
-      setSharingDay(null);
     }
   };
 
@@ -305,33 +267,6 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
                   <div>
                     <h3 className="font-bold text-2xl md:text-3xl font-serif">Day {day.day}</h3>
                     <p className="text-emerald-100 font-medium mt-1">{day.theme}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => exportDayItineraryToExcel(day, itinerary.title)}
-                      className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur px-4 py-2 rounded-full text-sm font-bold transition-all border border-white/30 print:hidden"
-                      title="匯出當日行程為 Excel 檔案"
-                    >
-                      <FileSpreadsheet className="w-4 h-4" />
-                      下載 Excel
-                    </button>
-                    <button 
-                      onClick={() => handleShareDay(day)}
-                      disabled={sharingDay === day.day}
-                      className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur px-4 py-2 rounded-full text-sm font-bold transition-all border border-white/30 disabled:opacity-50 print:hidden"
-                    >
-                      {sharingDay === day.day ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          製作中
-                        </>
-                      ) : (
-                        <>
-                          <Send className="w-4 h-4" />
-                          分享
-                        </>
-                      )}
-                    </button>
                   </div>
                 </div>
 
