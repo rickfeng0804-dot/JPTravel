@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ItineraryResult, DayPlan, Activity, SouvenirItem, FoodItem } from '../types';
-import { MapPin, ArrowLeft, ShoppingBag, Gift, Utensils, Camera, Train, Bed, ChevronDown, ChevronUp, BookOpen, Download, Share2, Loader2, Sparkles, Image as ImageIcon, FileSpreadsheet, Map, List, Send, FileText } from 'lucide-react';
+import { MapPin, ArrowLeft, ShoppingBag, Gift, Utensils, Camera, Train, Bed, ChevronDown, ChevronUp, BookOpen, Download, Loader2, Sparkles, Image as ImageIcon, FileSpreadsheet, Map, List, Send, FileText } from 'lucide-react';
 import ActivityIllustration from './ActivityIllustration';
 import DayMapGenerator from './DayMapGenerator';
 import TripMap from './TripMap';
-import { generateDayScheduleImage, generateItineraryCoverImage, generateItineraryPoster } from '../services/geminiService';
+import { generateDayScheduleImage, generateItineraryCoverImage } from '../services/geminiService';
 import { exportDayItineraryToExcel, exportItineraryToExcel } from '../services/exportService';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -28,7 +28,6 @@ type ViewMode = 'list' | 'map';
 const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset }) => {
   const [isSummaryOpen, setIsSummaryOpen] = useState(true);
   const [sharingDay, setSharingDay] = useState<number | null>(null);
-  const [isSharingItinerary, setIsSharingItinerary] = useState(false);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [coverImage, setCoverImage] = useState<string | null>(null);
   const [isCoverLoading, setIsCoverLoading] = useState(false);
@@ -92,43 +91,6 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
         alert("PDF 產生失敗，請稍後再試。");
     } finally {
         setIsPdfLoading(false);
-    }
-  };
-
-  const handleShareItinerary = async () => {
-    setIsSharingItinerary(true);
-    try {
-      const imageUrl = await generateItineraryPoster(itinerary);
-      
-      // Try to use native sharing if available
-      if (navigator.share && navigator.canShare) {
-        const response = await fetch(imageUrl);
-        const blob = await response.blob();
-        const file = new File([blob], `Trip_To_${itinerary.destination || 'Japan'}.png`, { type: 'image/png' });
-        
-        if (navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: itinerary.title,
-            text: `Check out my trip plan to ${itinerary.destination}: ${itinerary.title}`
-          });
-          return;
-        }
-      }
-
-      // Fallback: Trigger download
-      const link = document.createElement('a');
-      link.href = imageUrl;
-      link.download = `Trip_To_${itinerary.destination || 'Japan'}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-    } catch (error) {
-      console.error("Failed to share itinerary:", error);
-      alert("生成分享圖片失敗，請稍後再試。");
-    } finally {
-      setIsSharingItinerary(false);
     }
   };
 
@@ -204,9 +166,6 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
                 <button onClick={handleDownloadPDF} disabled={isPdfLoading} className="flex items-center text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg font-medium text-sm transition-colors disabled:opacity-50">
                     {isPdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
                 </button>
-                <button onClick={handleShareItinerary} disabled={isSharingItinerary} className="flex items-center text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg font-medium text-sm transition-colors disabled:opacity-50">
-                   {isSharingItinerary ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
-                </button>
                 <button onClick={handleExportExcel} className="flex items-center text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg font-medium text-sm transition-colors">
                     <FileSpreadsheet className="w-4 h-4" />
                 </button>
@@ -223,17 +182,6 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
                    <><Loader2 className="w-4 h-4 animate-spin" /> 轉檔中...</>
                 ) : (
                    <><FileText className="w-4 h-4" /> 下載 PDF</>
-                )}
-            </button>
-             <button 
-                onClick={handleShareItinerary} 
-                disabled={isSharingItinerary}
-                className="flex items-center text-emerald-600 hover:text-emerald-700 font-semibold transition-colors gap-2 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100 disabled:opacity-50"
-             >
-                {isSharingItinerary ? (
-                   <><Loader2 className="w-4 h-4 animate-spin" /> 製作中...</>
-                ) : (
-                   <><Share2 className="w-4 h-4" /> 分享海報</>
                 )}
             </button>
              <button onClick={handleExportExcel} className="flex items-center text-emerald-600 hover:text-emerald-700 font-semibold transition-colors gap-2 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100">
