@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import * as L from 'leaflet';
-import { ItineraryResult } from '../types';
+import { ItineraryResult, DAY_COLORS } from '../types';
 
 interface TripMapProps {
   itinerary: ItineraryResult;
@@ -17,19 +17,18 @@ const markerIcon = L.icon({
   shadowSize: [41, 41]
 });
 
-// Color markers for different days (using hue rotate on standard icon is tricky, 
-// keeping simple standard markers for now or could use custom divIcons)
+// Color markers for different days
 const createDayIcon = (day: number) => {
-  // Simple colored circle marker using DivIcon
-  const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'];
-  const color = colors[(day - 1) % colors.length];
+  // Use shared color palette, cycling if more days than colors
+  const color = DAY_COLORS[(day - 1) % DAY_COLORS.length];
   
   return L.divIcon({
-    className: 'custom-div-icon',
-    html: `<div style="background-color: ${color}; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 12px;">${day}</div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
-    popupAnchor: [0, -12]
+    className: 'custom-day-marker',
+    // Increased size to 28px and added thicker white border for better contrast
+    html: `<div style="background-color: ${color}; width: 28px; height: 28px; border-radius: 50%; border: 3px solid white; box-shadow: 0 3px 6px rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 14px; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">${day}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14]
   });
 };
 
@@ -70,7 +69,7 @@ const TripMap: React.FC<TripMapProps> = ({ itinerary }) => {
               .addTo(map)
               .bindPopup(`
                 <div class="font-sans">
-                  <strong class="text-emerald-700">Day ${day.day}</strong> - ${act.time}<br/>
+                  <strong style="color: ${DAY_COLORS[(day.day - 1) % DAY_COLORS.length]}">Day ${day.day}</strong> - ${act.time}<br/>
                   <span class="text-lg font-bold">${act.activity}</span><br/>
                   <span class="text-gray-500 text-sm">${act.location}</span>
                 </div>

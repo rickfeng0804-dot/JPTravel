@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ItineraryResult, DayPlan, Activity, SouvenirItem, FoodItem, TravelAlert } from '../types';
+import { ItineraryResult, DayPlan, Activity, SouvenirItem, FoodItem, TravelAlert, DAY_COLORS } from '../types';
 import { MapPin, ArrowLeft, ShoppingBag, Gift, Utensils, Camera, Train, Bed, ChevronDown, ChevronUp, BookOpen, Download, Loader2, Sparkles, Image as ImageIcon, FileSpreadsheet, Map, List, FileText, AlertTriangle, CalendarDays, Info, Flag, Bus, Footprints, Car, Timer } from 'lucide-react';
 import ActivityIllustration from './ActivityIllustration';
 import DayMapGenerator from './DayMapGenerator';
@@ -400,7 +400,7 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
                     <div key={day.day} className="flex items-center gap-1.5 text-xs font-medium bg-gray-50 px-2 py-1 rounded-full border border-gray-100">
                       <div 
                         className="w-3 h-3 rounded-full" 
-                        style={{ backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1'][(day.day - 1) % 7] }}
+                        style={{ backgroundColor: DAY_COLORS[(day.day - 1) % DAY_COLORS.length] }}
                       ></div>
                       Day {day.day}
                     </div>

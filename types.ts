@@ -92,3 +92,14 @@ export enum AppState {
   RESULT = 'RESULT',
   ERROR = 'ERROR'
 }
+
+// Consistent colors for itinerary days
+export const DAY_COLORS = [
+  '#10b981', // Day 1: Emerald (Green)
+  '#3b82f6', // Day 2: Blue
+  '#f59e0b', // Day 3: Amber (Orange)
+  '#ef4444', // Day 4: Red
+  '#8b5cf6', // Day 5: Violet
+  '#ec4899', // Day 6: Pink
+  '#06b6d4'  // Day 7: Cyan (High contrast vs Blue)
+];
