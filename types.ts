@@ -31,6 +31,13 @@ export interface GeoCoordinates {
   lng: number;
 }
 
+export interface TravelSuggestion {
+  mode: 'train' | 'bus' | 'walk' | 'taxi' | 'other';
+  duration: string; // e.g. "15 min"
+  details: string; // e.g. "搭乘 JR 山手線 (外回)"
+  rushHourWarning: boolean; // 是否為尖峰時刻
+}
+
 export interface Activity {
   time: string;
   activity: string;
@@ -39,6 +46,7 @@ export interface Activity {
   costEstimate?: string;
   type: ActivityType;
   geo?: GeoCoordinates; // 新增座標欄位
+  travelSuggestion?: TravelSuggestion; // 新增：前往此地點的交通建議 (相對於上一地點)
 }
 
 export interface DayPlan {
@@ -61,6 +69,13 @@ export interface FoodItem {
   estimatedPrice: string;
 }
 
+export interface TravelAlert {
+  type: 'holiday' | 'festival' | 'weather' | 'tip';
+  title: string;
+  date?: string;
+  description: string;
+}
+
 export interface ItineraryResult {
   title: string;
   summary: string;
@@ -68,6 +83,7 @@ export interface ItineraryResult {
   days: DayPlan[];
   recommendedSouvenirs: SouvenirItem[];
   recommendedFood: FoodItem[];
+  specialAlerts: TravelAlert[]; // 新增：特殊提醒 (連假、祭典、活動)
 }
 
 export enum AppState {

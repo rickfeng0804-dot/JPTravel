@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ItineraryResult, DayPlan, Activity, SouvenirItem, FoodItem } from '../types';
-import { MapPin, ArrowLeft, ShoppingBag, Gift, Utensils, Camera, Train, Bed, ChevronDown, ChevronUp, BookOpen, Download, Loader2, Sparkles, Image as ImageIcon, FileSpreadsheet, Map, List, FileText } from 'lucide-react';
+import { ItineraryResult, DayPlan, Activity, SouvenirItem, FoodItem, TravelAlert } from '../types';
+import { MapPin, ArrowLeft, ShoppingBag, Gift, Utensils, Camera, Train, Bed, ChevronDown, ChevronUp, BookOpen, Download, Loader2, Sparkles, Image as ImageIcon, FileSpreadsheet, Map, List, FileText, AlertTriangle, CalendarDays, Info, Flag, Bus, Footprints, Car, Timer } from 'lucide-react';
 import ActivityIllustration from './ActivityIllustration';
 import DayMapGenerator from './DayMapGenerator';
 import TripMap from './TripMap';
@@ -21,6 +21,29 @@ const ACTIVITY_STYLES: Record<string, { icon: React.ReactNode, color: string, bg
   shopping: { icon: <ShoppingBag className="w-4 h-4" />, color: 'text-pink-700', bg: 'bg-pink-50', border: 'border-pink-100', ring: 'ring-pink-200', label: '購物' },
   accommodation: { icon: <Bed className="w-4 h-4" />, color: 'text-indigo-700', bg: 'bg-indigo-50', border: 'border-indigo-100', ring: 'ring-indigo-200', label: '住宿' },
   other: { icon: <MapPin className="w-4 h-4" />, color: 'text-gray-700', bg: 'bg-gray-100', border: 'border-gray-200', ring: 'ring-gray-300', label: '其他' }
+};
+
+const ALERT_STYLES: Record<string, { icon: React.ReactNode, color: string, bg: string, border: string }> = {
+    holiday: { icon: <CalendarDays className="w-5 h-5" />, color: 'text-red-700', bg: 'bg-red-50', border: 'border-red-200' },
+    festival: { icon: <Flag className="w-5 h-5" />, color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-200' },
+    weather: { icon: <AlertTriangle className="w-5 h-5" />, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
+    tip: { icon: <Info className="w-5 h-5" />, color: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-200' },
+};
+
+const TRAVEL_ICONS: Record<string, React.ReactNode> = {
+  train: <Train className="w-3.5 h-3.5" />,
+  bus: <Bus className="w-3.5 h-3.5" />,
+  walk: <Footprints className="w-3.5 h-3.5" />,
+  taxi: <Car className="w-3.5 h-3.5" />,
+  other: <MapPin className="w-3.5 h-3.5" />
+};
+
+const TRAVEL_STYLES: Record<string, string> = {
+  train: 'text-blue-700 bg-blue-50 border-blue-200 hover:border-blue-300',
+  bus: 'text-purple-700 bg-purple-50 border-purple-200 hover:border-purple-300',
+  walk: 'text-emerald-700 bg-emerald-50 border-emerald-200 hover:border-emerald-300',
+  taxi: 'text-yellow-700 bg-yellow-50 border-yellow-200 hover:border-yellow-300',
+  other: 'text-gray-700 bg-gray-50 border-gray-200 hover:border-gray-300'
 };
 
 type ViewMode = 'list' | 'map';
@@ -255,6 +278,29 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
               <p className="text-lg text-gray-600 italic leading-relaxed max-w-3xl mx-auto text-left md:text-center">
                 {itinerary.summary}
               </p>
+
+              {/* Special Alerts Section */}
+              {itinerary.specialAlerts && itinerary.specialAlerts.length > 0 && (
+                 <div className="mt-8 grid gap-4 text-left">
+                    {itinerary.specialAlerts.map((alert: TravelAlert, idx) => {
+                       const style = ALERT_STYLES[alert.type || 'tip'] || ALERT_STYLES['tip'];
+                       return (
+                          <div key={idx} className={`p-4 rounded-xl border ${style.bg} ${style.border} flex gap-4 items-start shadow-sm`}>
+                             <div className={`p-2 rounded-full bg-white ${style.color} shrink-0`}>
+                                {style.icon}
+                             </div>
+                             <div>
+                                <h4 className={`font-bold text-base ${style.color} mb-1 flex items-center gap-2`}>
+                                   {alert.title}
+                                   {alert.date && <span className="text-xs px-2 py-0.5 rounded-full bg-white/50 border border-current opacity-80">{alert.date}</span>}
+                                </h4>
+                                <p className={`text-sm opacity-90 text-gray-700`}>{alert.description}</p>
+                             </div>
+                          </div>
+                       );
+                    })}
+                 </div>
+              )}
           </div>
         </div>
 
@@ -275,8 +321,32 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
                     <div className="space-y-8 print:space-y-4">
                       {day.activities.map((act: Activity, idx) => {
                           const style = ACTIVITY_STYLES[act.type || 'other'];
+                          const travelStyle = act.travelSuggestion ? (TRAVEL_STYLES[act.travelSuggestion.mode] || TRAVEL_STYLES['other']) : '';
+                          
                           return (
                             <div key={idx} className="relative pl-10 md:pl-12 group print:pl-8">
+                                {/* Travel Suggestion Connector */}
+                                {act.travelSuggestion && (
+                                  <div className="absolute -top-6 left-6 md:left-8 flex flex-col items-start z-10 w-full pr-12">
+                                     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm text-xs transition-colors max-w-full bg-white/95 backdrop-blur ${travelStyle}`}>
+                                        <span className="shrink-0">{TRAVEL_ICONS[act.travelSuggestion.mode] || TRAVEL_ICONS['other']}</span>
+                                        <span className="font-bold shrink-0">{act.travelSuggestion.duration}</span>
+                                        <span className="hidden sm:inline border-l border-current opacity-30 h-3 mx-1"></span>
+                                        <span className="hidden sm:inline truncate opacity-90">{act.travelSuggestion.details}</span>
+                                        {act.travelSuggestion.rushHourWarning && (
+                                          <span className="flex items-center gap-1 text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded-full border border-red-100 ml-1 shrink-0 animate-pulse">
+                                            <AlertTriangle className="w-3 h-3" />
+                                            <span className="hidden sm:inline">尖峰時段</span>
+                                          </span>
+                                        )}
+                                     </div>
+                                     {/* Mobile only detail view */}
+                                     <div className="sm:hidden text-[10px] text-gray-500 bg-white/80 px-2 py-0.5 rounded mt-1 ml-1 truncate max-w-[200px] shadow-sm border border-gray-100">
+                                        {act.travelSuggestion.details}
+                                     </div>
+                                  </div>
+                                )}
+
                                 <div className={`absolute left-2 md:left-4 top-2 w-4 h-4 rounded-full bg-white ring-[3px] ${style.ring}`}>
                                   <div className={`w-full h-full rounded-full opacity-60 ${style.bg.replace('bg-', 'bg-')}`}></div>
                                 </div>

@@ -7,7 +7,7 @@ interface DayMapGeneratorProps {
   destination: string;
 }
 
-const DayMapGenerator: React.FC<DayMapGeneratorProps> = ({ dayPlan }) => {
+const DayMapGenerator: React.FC<DayMapGeneratorProps> = ({ dayPlan, destination }) => {
   // --- Google Maps Logic ---
   const getGoogleMapsData = () => {
     // Filter activities that have meaningful locations
@@ -25,9 +25,16 @@ const DayMapGenerator: React.FC<DayMapGeneratorProps> = ({ dayPlan }) => {
 
     if (uniqueStops.length < 1) return null;
 
-    const origin = encodeURIComponent(uniqueStops[0]);
-    const destinationLoc = encodeURIComponent(uniqueStops[uniqueStops.length - 1]);
-    const waypoints = uniqueStops.slice(1, -1).map(p => encodeURIComponent(p)).join('|');
+    // Helper to ensure Google Maps searches for the location IN JAPAN at the specific destination
+    // This prevents confusion with places like "Songshan" (Taiwan) vs "Matsuyama" (Japan)
+    const formatForMaps = (loc: string) => {
+        // Combine location + destination context + "Japan" (in Traditional Chinese for better context matching)
+        return `${loc} ${destination} 日本`;
+    };
+
+    const origin = encodeURIComponent(formatForMaps(uniqueStops[0]));
+    const destinationLoc = encodeURIComponent(formatForMaps(uniqueStops[uniqueStops.length - 1]));
+    const waypoints = uniqueStops.slice(1, -1).map(p => encodeURIComponent(formatForMaps(p))).join('|');
 
     const mapUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destinationLoc}&waypoints=${waypoints}&travelmode=transit`;
     

@@ -46,10 +46,20 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
     **核心規劃重點：**
     1. **第一天行程**：請計算預計抵達時間。第一天的活動請務必在「預計抵達並完成入境後」才開始。
     2. **最後一天行程**：所有活動必須在回程航班起飛前「3小時」結束。
-    3. **住宿建議**：若使用者在「每日詳細指定」中有指定住宿，請優先採納；若無，請根據「住宿風格」在行程中建議具體的飯店或住宿區域。
+    3. **交通與移動細節 (Travel Logistics)**：
+       - 對於每一個活動(除了當天第一個活動)，請計算**從上一個地點移動到此地點**的交通方式。
+       - 請明確指出建議的**交通工具與路線名稱** (例如: "搭乘 JR 山手線", "搭乘東京地鐵銀座線", "步行", "計程車")。
+       - **尖峰時刻警告**：若移動時間落在平日早上 7:30-9:00 或 傍晚 17:00-19:30，且位於大城市(如東京、大阪)，請務必標記「尖峰時刻警告」，並在說明中建議避開或預留更多時間。
     4. **行程順暢度**：請確保每日行程的地理位置順暢，不要來回奔波。
     5. **繁體中文輸出**：所有文字說明請使用繁體中文。
-    6. **地理座標**：請盡可能精確提供每個景點或活動地點的經緯度 (lat, lng)，以便繪製地圖。
+    6. **地理座標**：請盡可能精確提供每個景點或活動地點的經緯度 (lat, lng)。
+
+    **重要提醒功能 (Critical):**
+    請務必檢查使用者的旅遊日期 (${formData.startDate} 起共 ${formData.days} 天) 是否遇到：
+    - 日本國定假日 (如：黃金週、盂蘭盆節、新年、白銀週、國定休日)。
+    - 當地大型祭典或活動 (如：祇園祭、花火大會、雪祭等)。
+    - 特殊季節現象 (如：梅雨季、颱風季、賞櫻/賞楓預測)。
+    若有遇到，請在 'specialAlerts' 欄位中詳細列出，並說明注意事項。
   `;
 
   const response = await ai.models.generateContent({
@@ -91,6 +101,17 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
                           lng: { type: Type.NUMBER }
                         },
                         required: ["lat", "lng"]
+                      },
+                      travelSuggestion: {
+                        type: Type.OBJECT,
+                        description: "從上一個行程點移動到此地點的交通建議 (當天第一個行程可為null)",
+                        properties: {
+                           mode: { type: Type.STRING, enum: ['train', 'bus', 'walk', 'taxi', 'other'], description: "主要交通方式" },
+                           duration: { type: Type.STRING, description: "預估移動時間 (例如: 15分鐘)" },
+                           details: { type: Type.STRING, description: "詳細路線或建議 (例如: 搭乘 JR 山手線外回)" },
+                           rushHourWarning: { type: Type.BOOLEAN, description: "是否會遇到上下班尖峰擁擠時段" }
+                        },
+                        required: ["mode", "duration", "details", "rushHourWarning"]
                       }
                     },
                     required: ["time", "activity", "description", "location", "type"]
@@ -125,9 +146,23 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
               },
               required: ["name", "description", "bestPlaceToEat", "estimatedPrice"]
             }
+          },
+          specialAlerts: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                type: { type: Type.STRING, enum: ["holiday", "festival", "weather", "tip"], description: "提醒類型" },
+                title: { type: Type.STRING, description: "標題 (例如: 黃金週提醒)" },
+                date: { type: Type.STRING, description: "相關日期 (可選)" },
+                description: { type: Type.STRING, description: "詳細說明與建議" }
+              },
+              required: ["type", "title", "description"]
+            },
+            description: "針對此日期區間的特殊提醒清單"
           }
         },
-        required: ["title", "summary", "days", "recommendedSouvenirs", "recommendedFood"]
+        required: ["title", "summary", "days", "recommendedSouvenirs", "recommendedFood", "specialAlerts"]
       }
     }
   });
@@ -213,46 +248,6 @@ export const generateDayScheduleImage = async (dayPlan: DayPlan, destination: st
     if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
   }
   throw new Error("Failed to generate schedule poster");
-};
-
-/**
- * Generates a summary poster for the entire itinerary.
- */
-export const generateItineraryPoster = async (itinerary: ItineraryResult): Promise<string> => {
-  const daySummary = itinerary.days.map(d => `Day ${d.day}: ${d.theme}`).join('\n');
-  
-  const prompt = `
-    Create a stunning, shareable travel poster (9:16 vertical ratio) for a trip to ${itinerary.destination || 'Japan'}.
-    
-    **Main Title:** ${itinerary.title}
-    **Destination:** ${itinerary.destination}
-    
-    **Itinerary Highlights to Display:**
-    ${daySummary}
-    
-    **Design Instructions:**
-    - Layout: Professional Travel Magazine Cover style.
-    - Upper Section: A breathtaking, high-quality scenic photo of ${itinerary.destination}.
-    - Lower Section: A clean, elegant list of the daily themes. Use a readable font on a solid or semi-transparent background.
-    - Mood: Exciting, adventurous, and polished.
-    - Colors: Varies based on destination (e.g. Pink for Kyoto, Blue for Okinawa, White for Hokkaido).
-    - Ensure text is legible.
-  `;
-
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-image',
-    contents: { parts: [{ text: prompt }] },
-    config: {
-      imageConfig: {
-        aspectRatio: "9:16",
-      }
-    }
-  });
-
-  for (const part of response.candidates?.[0]?.content?.parts || []) {
-    if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
-  }
-  throw new Error("Failed to generate itinerary poster");
 };
 
 /**
