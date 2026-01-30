@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ItineraryResult, DayPlan, Activity, SouvenirItem, FoodItem, TravelAlert, DAY_COLORS } from '../types';
-import { MapPin, ArrowLeft, ShoppingBag, Gift, Utensils, Camera, Train, Bed, ChevronDown, ChevronUp, BookOpen, Download, Loader2, Sparkles, Image as ImageIcon, FileSpreadsheet, Map, List, FileText, AlertTriangle, CalendarDays, Info, Flag, Bus, Footprints, Car, Timer } from 'lucide-react';
+import { MapPin, ArrowLeft, ShoppingBag, Gift, Utensils, Camera, Train, Bed, ChevronDown, ChevronUp, BookOpen, Download, Loader2, Sparkles, Image as ImageIcon, FileSpreadsheet, Map, List, FileText, AlertTriangle, CalendarDays, Info, Flag, Bus, Footprints, Car, Timer, Navigation } from 'lucide-react';
 import ActivityIllustration from './ActivityIllustration';
 import DayMapGenerator from './DayMapGenerator';
 import TripMap from './TripMap';
-import { generateItineraryCoverImage } from '../services/geminiService';
+import { generateItineraryMapImage } from '../services/geminiService';
 import { exportItineraryToExcel } from '../services/exportService';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -31,11 +31,11 @@ const ALERT_STYLES: Record<string, { icon: React.ReactNode, color: string, bg: s
 };
 
 const TRAVEL_ICONS: Record<string, React.ReactNode> = {
-  train: <Train className="w-3.5 h-3.5" />,
-  bus: <Bus className="w-3.5 h-3.5" />,
-  walk: <Footprints className="w-3.5 h-3.5" />,
-  taxi: <Car className="w-3.5 h-3.5" />,
-  other: <MapPin className="w-3.5 h-3.5" />
+  train: <Train className="w-4 h-4" />,
+  bus: <Bus className="w-4 h-4" />,
+  walk: <Footprints className="w-4 h-4" />,
+  taxi: <Car className="w-4 h-4" />,
+  other: <MapPin className="w-4 h-4" />
 };
 
 const TRAVEL_STYLES: Record<string, string> = {
@@ -46,13 +46,31 @@ const TRAVEL_STYLES: Record<string, string> = {
   other: 'text-gray-700 bg-gray-50 border-gray-200 hover:border-gray-300'
 };
 
+// Helper function to calculate distance between two coordinates in km
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): string | null => {
+  if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+  
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * (Math.PI / 180);
+  const dLon = (lon2 - lon1) * (Math.PI / 180);
+  const a = 
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const d = R * c; // Distance in km
+  
+  if (d < 1) return `${(d * 1000).toFixed(0)}m`;
+  return `${d.toFixed(1)}km`;
+};
+
 type ViewMode = 'list' | 'map';
 
 const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset }) => {
   const [isSummaryOpen, setIsSummaryOpen] = useState(true);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
-  const [coverImage, setCoverImage] = useState<string | null>(null);
-  const [isCoverLoading, setIsCoverLoading] = useState(false);
+  const [mapImage, setMapImage] = useState<string | null>(null);
+  const [isMapLoading, setIsMapLoading] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -116,16 +134,17 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
     }
   };
 
-  const handleGenerateCover = async () => {
-    setIsCoverLoading(true);
+  const handleGenerateMap = async () => {
+    setIsMapLoading(true);
     try {
-      const url = await generateItineraryCoverImage(itinerary.title, itinerary.destination || "Japan");
-      setCoverImage(url);
+      // Pass the entire itinerary object to generate a map based on all locations
+      const url = await generateItineraryMapImage(itinerary);
+      setMapImage(url);
     } catch (error) {
-      console.error("Failed to generate cover:", error);
-      alert("封面生成失敗，請稍後再試。");
+      console.error("Failed to generate map:", error);
+      alert("地圖生成失敗，請稍後再試。");
     } finally {
-      setIsCoverLoading(false);
+      setIsMapLoading(false);
     }
   };
   
@@ -218,38 +237,39 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
           
           <div className={`p-8 pt-6 text-center border-t border-emerald-50/50 animate-fade-in print:block ${isSummaryOpen ? 'block' : 'hidden'}`}>
               
-              {/* Cover Image Section */}
-              <div className={`relative w-full aspect-video md:aspect-[21/9] bg-emerald-50 mb-8 rounded-2xl overflow-hidden shadow-inner group border border-emerald-100 ${coverImage ? '' : 'print:hidden'}`}>
-                {coverImage ? (
+              {/* Map Image Section */}
+              <div className={`relative w-full aspect-video md:aspect-[21/9] bg-emerald-50 mb-8 rounded-2xl overflow-hidden shadow-inner group border border-emerald-100 ${mapImage ? '' : 'print:hidden'}`}>
+                {mapImage ? (
                   <>
                     <img 
-                      src={coverImage} 
-                      alt="Itinerary Cover" 
+                      src={mapImage} 
+                      alt="Itinerary Map" 
                       className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/60 to-transparent flex flex-col justify-end p-6 text-left">
-                       <span className="text-emerald-200 text-xs font-bold tracking-widest uppercase mb-1 bg-black/20 backdrop-blur w-fit px-2 py-1 rounded">Studio Ghibli Style</span>
+                       <span className="text-emerald-200 text-xs font-bold tracking-widest uppercase mb-1 bg-black/20 backdrop-blur w-fit px-2 py-1 rounded">Travel Map Art</span>
                        <h2 className="text-2xl md:text-3xl font-serif font-bold text-white drop-shadow-lg">{itinerary.title}</h2>
                     </div>
                   </>
                 ) : (
                   <div className="absolute inset-0 flex flex-col items-center justify-center bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
-                     {isCoverLoading ? (
+                     {isMapLoading ? (
                        <div className="flex flex-col items-center text-emerald-600">
                           <Loader2 className="w-10 h-10 animate-spin mb-3" />
-                          <span className="font-medium">正在繪製吉卜力風格封面...</span>
+                          <span className="font-medium">AI 正在繪製吉卜力風格行程地圖...</span>
+                          <span className="text-xs text-emerald-500 mt-1">標註景點與路線中</span>
                        </div>
                      ) : (
                        <div className="text-center">
-                          <h3 className="text-emerald-800 font-bold text-xl mb-3">為您的行程增添魔法</h3>
+                          <h3 className="text-emerald-800 font-bold text-xl mb-3">視覺化您的夢幻旅程</h3>
                           <button 
-                            onClick={handleGenerateCover}
+                            onClick={handleGenerateMap}
                             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full font-bold shadow-lg hover:shadow-emerald-200/50 hover:scale-105 transition-all"
                           >
-                            <Sparkles className="w-5 h-5" />
-                            生成吉卜力風格封面
+                            <Map className="w-5 h-5" />
+                            生成吉卜力風格旅遊地圖
                           </button>
-                          <p className="text-xs text-emerald-600/60 mt-3">AI 繪製宮崎駿動畫風格專屬插圖</p>
+                          <p className="text-xs text-emerald-600/60 mt-3">包含主要景點路線與繁體中文標示</p>
                        </div>
                      )}
                   </div>
@@ -257,7 +277,7 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
               </div>
 
               {/* Default Title */}
-              {(!coverImage) && (
+              {(!mapImage) && (
                 <div className="mb-6">
                   {itinerary.destination && (
                       <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-sm font-medium mb-4">
@@ -270,7 +290,7 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
               )}
               
               {/* Print Header Logic */}
-              <div className={`hidden print:block mb-6 ${coverImage ? 'print:hidden' : ''}`}>
+              <div className={`hidden print:block mb-6 ${mapImage ? 'print:hidden' : ''}`}>
                  <h1 className="text-3xl font-bold text-emerald-800">{itinerary.title}</h1>
                  <div className="text-sm text-gray-500 mt-2">{itinerary.destination} • 園長揪團遊日本</div>
               </div>
@@ -323,6 +343,15 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
                           const style = ACTIVITY_STYLES[act.type || 'other'];
                           const travelStyle = act.travelSuggestion ? (TRAVEL_STYLES[act.travelSuggestion.mode] || TRAVEL_STYLES['other']) : '';
                           
+                          // Calculate distance from previous activity
+                          let distanceStr = null;
+                          if (idx > 0) {
+                              const prevAct = day.activities[idx - 1];
+                              if (prevAct.geo && act.geo && prevAct.geo.lat && act.geo.lat) {
+                                  distanceStr = calculateDistance(prevAct.geo.lat, prevAct.geo.lng, act.geo.lat, act.geo.lng);
+                              }
+                          }
+
                           return (
                             <div key={idx} className="relative pl-10 md:pl-12 group print:pl-8">
                                 {/* Travel Suggestion Connector */}
@@ -331,11 +360,17 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
                                      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm text-xs transition-colors max-w-full bg-white/95 backdrop-blur ${travelStyle}`}>
                                         <span className="shrink-0">{TRAVEL_ICONS[act.travelSuggestion.mode] || TRAVEL_ICONS['other']}</span>
                                         <span className="font-bold shrink-0">{act.travelSuggestion.duration}</span>
+                                        {distanceStr && (
+                                            <>
+                                                <span className="hidden sm:inline border-l border-current opacity-30 h-3 mx-1"></span>
+                                                <span className="font-mono text-emerald-700 font-bold shrink-0">約 {distanceStr}</span>
+                                            </>
+                                        )}
                                         <span className="hidden sm:inline border-l border-current opacity-30 h-3 mx-1"></span>
                                         <span className="hidden sm:inline truncate opacity-90">{act.travelSuggestion.details}</span>
                                         {act.travelSuggestion.rushHourWarning && (
                                           <span className="flex items-center gap-1 text-red-600 font-bold bg-red-50 px-2 py-0.5 rounded-full border border-red-100 ml-1 shrink-0 animate-pulse">
-                                            <AlertTriangle className="w-3 h-3" />
+                                            <AlertTriangle className="w-3.5 h-3.5" />
                                             <span className="hidden sm:inline">尖峰時段</span>
                                           </span>
                                         )}

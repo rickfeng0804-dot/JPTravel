@@ -1,131 +1,241 @@
-import React, { useEffect, useState } from 'react';
-import { Map, ExternalLink, Loader2 } from 'lucide-react';
-import { DayPlan } from '../types';
-import { toDataURL } from 'qrcode';
+import React, { useEffect, useState, useRef } from 'react';
+import { Map as MapIcon, ExternalLink, Navigation } from 'lucide-react';
+import { DayPlan, DAY_COLORS, GeoCoordinates } from '../types';
+import * as L from 'leaflet';
 
 interface DayMapGeneratorProps {
   dayPlan: DayPlan;
   destination: string;
 }
 
+interface RouteNode {
+    name: string;
+    geo?: GeoCoordinates;
+}
+
+// Helper function to calculate distance between two coordinates in km
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): string | null => {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+    
+    const R = 6371; // Radius of the earth in km
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) * Math.cos(lat2 * (Math.PI / 180)) * 
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = R * c; // Distance in km
+    
+    if (d < 1) return `${(d * 1000).toFixed(0)}m`;
+    return `${d.toFixed(1)}km`;
+};
+
 const DayMapGenerator: React.FC<DayMapGeneratorProps> = ({ dayPlan, destination }) => {
-  const [mapData, setMapData] = useState<{ stops: string[], mapUrl: string, qrCodeUrl: string } | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [googleMapUrl, setGoogleMapUrl] = useState<string>('');
+  const [routeNodes, setRouteNodes] = useState<RouteNode[]>([]);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
 
+  // 1. Calculate Google Maps Link and Stops
   useEffect(() => {
-    const generate = async () => {
-        setIsLoading(true);
-        // Filter activities that have meaningful locations
-        const validActivities = dayPlan.activities.filter(a => 
-            ['sightseeing', 'food', 'shopping', 'accommodation'].includes(a.type) && 
-            a.location && a.location !== '無' && a.location !== 'TBD'
-        );
+    // Filter activities that have meaningful locations
+    const validActivities = dayPlan.activities.filter(a => 
+        ['sightseeing', 'food', 'shopping', 'accommodation'].includes(a.type) && 
+        a.location && a.location !== '無' && a.location !== 'TBD'
+    );
 
-        // Deduplicate consecutive locations (e.g., stay at same place)
-        const uniqueActivities = validActivities.filter((item, pos, arr) => 
-            !pos || item.location !== arr[pos - 1].location
-        );
+    // Deduplicate consecutive locations
+    const uniqueActivities = validActivities.filter((item, pos, arr) => 
+        !pos || item.location !== arr[pos - 1].location
+    );
 
-        if (uniqueActivities.length < 1) {
-            setMapData(null);
-            setIsLoading(false);
-            return;
-        }
+    if (uniqueActivities.length < 1) {
+        setGoogleMapUrl('');
+        setRouteNodes([]);
+        return;
+    }
 
-        // Helper to format location for Google Maps
-        const formatLoc = (act: typeof uniqueActivities[0]) => {
-             // 優先使用經緯度，確保導航精準度並縮短網址長度
-             // Prioritize coordinates for precision and shorter URLs
-             if (act.geo && act.geo.lat && act.geo.lng) {
-                 return `${act.geo.lat},${act.geo.lng}`;
-             }
-             // Fallback: Combine location + destination context + "Japan"
-             return `${act.location} ${destination} 日本`;
-        };
+    setRouteNodes(uniqueActivities.map(a => ({ name: a.location, geo: a.geo })));
 
-        const origin = encodeURIComponent(formatLoc(uniqueActivities[0]));
-        const destAct = uniqueActivities[uniqueActivities.length - 1];
-        const destinationLoc = encodeURIComponent(formatLoc(destAct));
-        
-        const waypoints = uniqueActivities.slice(1, -1)
-            .map(act => encodeURIComponent(formatLoc(act)))
-            .join('|');
-
-        let mapUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destinationLoc}&travelmode=transit`;
-        if (waypoints) {
-            mapUrl += `&waypoints=${waypoints}`;
-        }
-
-        try {
-            // Use client-side QR code generation to handle longer URLs reliably
-            const qrCodeUrl = await toDataURL(mapUrl, { width: 256, margin: 1, color: { dark: '#000000', light: '#ffffff' } });
-            setMapData({
-                stops: uniqueActivities.map(a => a.location),
-                mapUrl,
-                qrCodeUrl
-            });
-        } catch (e) {
-            console.error("QR Generation failed", e);
-        }
-        setIsLoading(false);
+    // Helper to format location for Google Maps URL
+    const formatLoc = (act: typeof uniqueActivities[0]) => {
+         if (act.geo && act.geo.lat && act.geo.lng) {
+             return `${act.geo.lat},${act.geo.lng}`;
+         }
+         return `${act.location} ${destination} 日本`;
     };
 
-    generate();
+    const origin = encodeURIComponent(formatLoc(uniqueActivities[0]));
+    const destAct = uniqueActivities[uniqueActivities.length - 1];
+    const destinationLoc = encodeURIComponent(formatLoc(destAct));
+    
+    const waypoints = uniqueActivities.slice(1, -1)
+        .map(act => encodeURIComponent(formatLoc(act)))
+        .join('|');
+
+    let mapUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destinationLoc}&travelmode=transit`;
+    if (waypoints) {
+        mapUrl += `&waypoints=${waypoints}`;
+    }
+    setGoogleMapUrl(mapUrl);
+
   }, [dayPlan, destination]);
 
-  if (!mapData && !isLoading) return null;
+  // 2. Render Leaflet Map
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    
+    // Cleanup previous map instance if it exists
+    if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+    }
+
+    // Get activities with valid coordinates for the visual map
+    const activitiesWithGeo = dayPlan.activities.filter(a => 
+        a.geo && a.geo.lat && a.geo.lng && a.location
+    );
+
+    // Deduplicate consecutive geo locations
+    const routePoints = activitiesWithGeo.filter((item, pos, arr) => 
+        !pos || (item.geo!.lat !== arr[pos - 1].geo!.lat && item.geo!.lng !== arr[pos - 1].geo!.lng)
+    );
+
+    if (routePoints.length === 0) return;
+
+    // Initialize Map
+    const startPoint = routePoints[0].geo!;
+    const map = L.map(mapContainerRef.current).setView([startPoint.lat, startPoint.lng], 13);
+    
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    mapInstanceRef.current = map;
+
+    // Define color for this day
+    const dayColor = DAY_COLORS[(dayPlan.day - 1) % DAY_COLORS.length];
+
+    // Create Markers
+    const markers: L.Marker[] = [];
+    const latLngs: L.LatLngExpression[] = [];
+
+    routePoints.forEach((act, idx) => {
+        if (!act.geo) return;
+        
+        latLngs.push([act.geo.lat, act.geo.lng]);
+
+        const icon = L.divIcon({
+            className: 'custom-day-route-marker',
+            html: `<div style="background-color: ${dayColor}; width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; font-weight: bold; color: white; font-size: 12px;">${idx + 1}</div>`,
+            iconSize: [24, 24],
+            iconAnchor: [12, 12],
+            popupAnchor: [0, -12]
+        });
+
+        const marker = L.marker([act.geo.lat, act.geo.lng], { icon })
+            .addTo(map)
+            .bindPopup(`<b>${idx + 1}. ${act.activity}</b><br/>${act.location}`);
+        markers.push(marker);
+    });
+
+    // Draw Polyline (Route)
+    if (latLngs.length > 1) {
+        L.polyline(latLngs, {
+            color: dayColor,
+            weight: 3,
+            opacity: 0.8,
+            dashArray: '10, 10' // Dashed line to represent travel
+        }).addTo(map);
+    }
+
+    // Fit bounds
+    if (markers.length > 0) {
+        const group = L.featureGroup(markers);
+        map.fitBounds(group.getBounds(), { padding: [30, 30] });
+    }
+
+    return () => {
+        if (mapInstanceRef.current) {
+            mapInstanceRef.current.remove();
+            mapInstanceRef.current = null;
+        }
+    };
+
+  }, [dayPlan]);
+
+
+  if (!googleMapUrl) return null;
 
   return (
     <div className="mt-6 border-t border-emerald-100 pt-6">
       <div className="bg-white p-6 rounded-2xl shadow-sm border border-red-100 animate-fade-in">
-           <div className="flex flex-col md:flex-row gap-8">
-              {/* Route List */}
-              <div className="flex-1">
+           <div className="flex flex-col lg:flex-row gap-8">
+              {/* Route List with Distances */}
+              <div className="flex-1 min-w-[200px]">
                  <h4 className="font-bold text-gray-800 flex items-center gap-2 mb-4 text-lg">
-                    <Map className="w-5 h-5 text-red-500" />
-                    Day {dayPlan.day} 導航路線
+                    <Navigation className="w-5 h-5 text-red-500" />
+                    Day {dayPlan.day} 路線順序圖
                  </h4>
                  
-                 <div className="relative pl-4 space-y-6 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-200">
-                    {mapData?.stops.map((stop, idx) => (
-                      <div key={idx} className="relative flex items-center gap-3">
-                          <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center bg-white z-10 ${idx === 0 || idx === (mapData?.stops.length || 0) - 1 ? 'border-red-500 text-red-500' : 'border-gray-400 text-gray-400'}`}>
-                            <span className="text-[10px] font-bold">{idx + 1}</span>
+                 <div className="space-y-0">
+                    {routeNodes.map((node, idx) => {
+                      let distanceToNext = null;
+                      if (idx < routeNodes.length - 1) {
+                          const nextNode = routeNodes[idx + 1];
+                          if (node.geo?.lat && node.geo?.lng && nextNode.geo?.lat && nextNode.geo?.lng) {
+                              distanceToNext = calculateDistance(node.geo.lat, node.geo.lng, nextNode.geo.lat, nextNode.geo.lng);
+                          }
+                      }
+
+                      return (
+                      <div key={idx} className="relative">
+                          {/* Node */}
+                          <div className="flex items-center gap-3 relative z-10">
+                              <div className={`w-7 h-7 rounded-full border-2 flex items-center justify-center bg-white shrink-0 ${idx === 0 || idx === (routeNodes.length || 0) - 1 ? 'border-red-500 text-red-500 shadow-red-100 shadow-md' : 'border-gray-400 text-gray-400'}`}>
+                                <span className="text-xs font-bold">{idx + 1}</span>
+                              </div>
+                              <div className="text-sm font-medium text-gray-700 bg-gray-50 px-3 py-2 rounded-lg border border-gray-100 w-full truncate shadow-sm">
+                                {node.name}
+                              </div>
                           </div>
-                          <div className="text-sm font-medium text-gray-700 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-100 w-full truncate">
-                            {stop}
-                          </div>
+
+                          {/* Connector Line & Distance */}
+                          {idx < routeNodes.length - 1 && (
+                              <div className="ml-[13px] h-10 border-l-2 border-dashed border-gray-300 my-1 flex items-center pl-4">
+                                  {distanceToNext && (
+                                      <span className="text-[10px] font-mono text-gray-400 bg-white px-1 py-0.5 rounded border border-gray-100">
+                                          ⬇ {distanceToNext}
+                                      </span>
+                                  )}
+                              </div>
+                          )}
                       </div>
-                    ))}
+                    )})}
                  </div>
               </div>
 
-              {/* Action / QR Code */}
-              <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 rounded-xl p-6 border border-gray-100">
-                 {isLoading ? (
-                    <div className="flex flex-col items-center text-gray-400 py-8">
-                        <Loader2 className="w-8 h-8 animate-spin mb-2" />
-                        <span className="text-xs">產生路線QR Code...</span>
-                    </div>
-                 ) : mapData && (
-                 <>
-                    <div className="bg-white p-2 rounded-lg shadow-sm border border-gray-200 mb-4">
-                      <img src={mapData.qrCodeUrl} alt="Google Maps Route QR" className="w-32 h-32 md:w-40 md:h-40" />
-                    </div>
-                    <p className="text-xs text-gray-500 mb-4 text-center">
-                      手機掃描 QR Code <br/> 直接在 Google Maps App 開啟路線
-                    </p>
-                    <a 
-                      href={mapData.mapUrl} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-6 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors shadow-lg hover:shadow-red-200 w-full md:w-auto justify-center"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      開啟 Google Maps 導航
-                    </a>
-                 </>
-                 )}
+              {/* Visual Map & Action */}
+              <div className="flex-[2] flex flex-col gap-4">
+                 {/* Leaflet Map Container */}
+                 <div className="w-full h-64 md:h-72 rounded-xl overflow-hidden border border-gray-200 shadow-inner bg-gray-100 relative z-0">
+                    <div ref={mapContainerRef} className="w-full h-full z-0" />
+                 </div>
+
+                 {/* Google Maps Button */}
+                 <a 
+                   href={googleMapUrl} 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   className="flex items-center justify-center gap-2 px-6 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors shadow-lg hover:shadow-red-200 w-full"
+                 >
+                   <ExternalLink className="w-4 h-4" />
+                   開啟 Google Maps 完整導航
+                 </a>
+                 <p className="text-xs text-gray-400 text-center">
+                   點擊按鈕將開啟 Google Maps App 進行即時導航
+                 </p>
               </div>
            </div>
         </div>

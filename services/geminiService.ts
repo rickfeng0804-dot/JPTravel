@@ -177,21 +177,35 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
 };
 
 /**
- * Generates an activity illustration.
+ * Generates an AI illustration for an activity (Ghibli style).
  */
 export const generateActivityIllustration = async (activity: string, location: string, description: string): Promise<string> => {
-  const prompt = `Japanese anime style illustration of ${activity} in ${location}. Scenic background, vibrant colors, no text.`;
+  const prompt = `
+    Create a warm, artistic, watercolor style travel illustration (Studio Ghibli art style) for:
+    Activity: ${activity}
+    Location: ${location}
+    Mood: ${description}
+    
+    Requirements:
+    - No text/words in the image.
+    - Scenic and inviting.
+    - Soft lighting, vibrant but natural colors.
+  `;
 
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash-image',
     contents: { parts: [{ text: prompt }] },
-    config: { imageConfig: { aspectRatio: "16:9" } }
+    config: {
+      imageConfig: {
+        aspectRatio: "4:3",
+      }
+    }
   });
 
   for (const part of response.candidates?.[0]?.content?.parts || []) {
     if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
   }
-  throw new Error("Failed to generate image");
+  throw new Error("Failed to generate illustration");
 };
 
 /**
@@ -251,20 +265,50 @@ export const generateDayScheduleImage = async (dayPlan: DayPlan, destination: st
 };
 
 /**
- * Generates a Studio Ghibli style cover image for the itinerary.
+ * Generates a Studio Ghibli / Shinkai style Travel Map illustrating the itinerary.
  */
-export const generateItineraryCoverImage = async (title: string, destination: string): Promise<string> => {
+export const generateItineraryMapImage = async (itinerary: ItineraryResult): Promise<string> => {
+  // 1. Extract unique locations to prevent duplicates in the prompt
+  const uniqueLocations = new Set<string>();
+  const highlights: string[] = [];
+
+  itinerary.days.forEach(day => {
+    day.activities.forEach(act => {
+      // Filter for major location types and ensure uniqueness
+      if (['sightseeing', 'food', 'accommodation', 'shopping'].includes(act.type) && act.location && act.location.length < 10) {
+         if (!uniqueLocations.has(act.location)) {
+           uniqueLocations.add(act.location);
+           // Collect top 6-8 distinct locations for the map to avoid overcrowding
+           if (uniqueLocations.size <= 8) {
+              highlights.push(act.location);
+           }
+         }
+      }
+    });
+  });
+
+  const locationList = highlights.join(', ');
+  
+  // 2. Construct a prompt for a map visualization
   const prompt = `
-    Studio Ghibli style, Hayao Miyazaki anime landscape art for a travel destination: ${destination}.
-    
-    Context Title: ${title}
-    
-    Visual Style:
-    - Hand-painted watercolor background texture.
-    - Lush green nature, summer vibes, vibrant blue sky with giant fluffy cumulus clouds.
-    - Peaceful, nostalgic, and magical atmosphere.
-    - Wide panoramic shot of the location's most iconic scenery in anime style.
-    - No text, no words.
+    Create a stunning, wide-format Illustrated Travel Map (Artistic Itinerary Map) in the art style of Studio Ghibli (Hayao Miyazaki) or Makoto Shinkai.
+
+    **Map Content:**
+    - Visualizing a journey through: ${itinerary.destination}.
+    - Visually connect these specific path locations on the map: ${locationList}.
+    - The path should be winding and adventurous, connecting the landmarks.
+
+    **Visual Style:**
+    - Hand-painted watercolor background texture (Ghibli style).
+    - Lush green landscapes, vibrant blue skies with giant fluffy cumulus clouds (Shinkai style).
+    - Magical, nostalgic, and warm atmosphere.
+    - Perspective: Isometric or Bird's-eye view of the region.
+
+    **Text Requirements (CRITICAL):**
+    - The image MUST include the main Title in large, elegant Traditional Chinese Calligraphy: "${itinerary.title}".
+    - Label the key locations on the map with **Traditional Chinese** text: ${locationList}.
+    - Ensure the text is legible, blends with the art style, but stands out enough to be read.
+    - Do not include English text if possible, prioritize Traditional Chinese.
   `;
 
   const response = await ai.models.generateContent({
@@ -280,5 +324,5 @@ export const generateItineraryCoverImage = async (title: string, destination: st
   for (const part of response.candidates?.[0]?.content?.parts || []) {
     if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
   }
-  throw new Error("Failed to generate cover image");
+  throw new Error("Failed to generate map image");
 };
