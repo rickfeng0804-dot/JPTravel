@@ -84,6 +84,7 @@ export interface ItineraryResult {
   recommendedSouvenirs: SouvenirItem[];
   recommendedFood: FoodItem[];
   specialAlerts: TravelAlert[]; // 新增：特殊提醒 (連假、祭典、活動)
+  featuredHighlights: string[]; // 新增：8張精選美景或美食描述
 }
 
 export enum AppState {

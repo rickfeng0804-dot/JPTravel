@@ -60,6 +60,12 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
     - 當地大型祭典或活動 (如：祇園祭、花火大會、雪祭等)。
     - 特殊季節現象 (如：梅雨季、颱風季、賞櫻/賞楓預測)。
     若有遇到，請在 'specialAlerts' 欄位中詳細列出，並說明注意事項。
+
+    **精選視覺亮點 (Visual Highlights):**
+    請精心挑選 **8個** 此行程中最具代表性、最適合拍照發 Instagram 的畫面描述。
+    - 請包含 **4個絕美風景/地標** 與 **4個必吃特色美食**。
+    - 描述請具體且充滿畫面感（例如：「夕陽餘暉下的清水寺舞台，被楓葉染紅」或「熱氣騰騰的博多豚骨拉麵，配上溏心蛋與叉燒」）。
+    - 這些描述將用於生成高品質的旅遊相簿。
   `;
 
   const response = await ai.models.generateContent({
@@ -160,9 +166,14 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
               required: ["type", "title", "description"]
             },
             description: "針對此日期區間的特殊提醒清單"
+          },
+          featuredHighlights: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: "8個此行程中最具代表性的美景或美食畫面描述 (4景4食)"
           }
         },
-        required: ["title", "summary", "days", "recommendedSouvenirs", "recommendedFood", "specialAlerts"]
+        required: ["title", "summary", "days", "recommendedSouvenirs", "recommendedFood", "specialAlerts", "featuredHighlights"]
       }
     }
   });
@@ -206,6 +217,34 @@ export const generateActivityIllustration = async (activity: string, location: s
     if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
   }
   throw new Error("Failed to generate illustration");
+};
+
+/**
+ * Generates a photorealistic travel photo for highlights.
+ */
+export const generateHighlightImage = async (description: string, destination: string): Promise<string> => {
+  const prompt = `
+    Generate a high-quality, photorealistic travel photography image.
+    Subject: ${description}.
+    Location Context: ${destination}, Japan.
+    Style: Professional travel magazine photography, cinematic lighting, 8k resolution, highly detailed.
+    
+    Requirements:
+    - If it's food: Close-up, appetizing, restaurant setting.
+    - If it's scenery: Wide angle or balanced composition, capturing the atmosphere.
+    - NO text or watermarks.
+  `;
+  
+  const response = await ai.models.generateContent({
+    model: 'gemini-2.5-flash-image',
+    contents: { parts: [{ text: prompt }] },
+    config: { imageConfig: { aspectRatio: "1:1" } } // Instagram style square
+  });
+
+  for (const part of response.candidates?.[0]?.content?.parts || []) {
+    if (part.inlineData) return `data:image/png;base64,${part.inlineData.data}`;
+  }
+  throw new Error("Failed to generate highlight photo");
 };
 
 /**

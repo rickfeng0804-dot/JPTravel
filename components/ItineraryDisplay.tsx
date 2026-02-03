@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ItineraryResult, DayPlan, Activity, SouvenirItem, FoodItem, TravelAlert, DAY_COLORS } from '../types';
-import { MapPin, ArrowLeft, ShoppingBag, Gift, Utensils, Camera, Train, Bed, ChevronDown, ChevronUp, BookOpen, Download, Loader2, Sparkles, Image as ImageIcon, FileSpreadsheet, Map, List, FileText, AlertTriangle, CalendarDays, Info, Flag, Bus, Footprints, Car, Timer, Navigation } from 'lucide-react';
+import { MapPin, ArrowLeft, ShoppingBag, Gift, Utensils, Camera, Train, Bed, ChevronDown, ChevronUp, BookOpen, Download, Loader2, Sparkles, Image as ImageIcon, FileSpreadsheet, Map, List, FileText, AlertTriangle, CalendarDays, Info, Flag, Bus, Footprints, Car, Timer, Navigation, Share2, Instagram } from 'lucide-react';
 import ActivityIllustration from './ActivityIllustration';
 import DayMapGenerator from './DayMapGenerator';
 import TripMap from './TripMap';
+import FeaturedGallery from './FeaturedGallery'; // Import new component
 import { generateItineraryMapImage } from '../services/geminiService';
 import { exportItineraryToExcel } from '../services/exportService';
 import html2canvas from 'html2canvas';
@@ -72,7 +73,13 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
   const [mapImage, setMapImage] = useState<string | null>(null);
   const [isMapLoading, setIsMapLoading] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  
+  // States for Story Export
+  const [exportingDay, setExportingDay] = useState<DayPlan | null>(null);
+  const [isExportingStory, setIsExportingStory] = useState(false);
+  
   const contentRef = useRef<HTMLDivElement>(null);
+  const storyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleBeforePrint = () => {
@@ -83,6 +90,13 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
     return () => window.removeEventListener('beforeprint', handleBeforePrint);
   }, []);
 
+  // Effect to trigger story download once the hidden element is rendered
+  useEffect(() => {
+    if (exportingDay && storyRef.current && !isExportingStory) {
+      exportStoryImage();
+    }
+  }, [exportingDay]);
+
   const handleExportExcel = () => {
     exportItineraryToExcel(itinerary);
   };
@@ -92,35 +106,27 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
     setIsPdfLoading(true);
 
     try {
-        // 1. 強制切換到列表模式並展開摘要，確保內容完整
         setViewMode('list');
         setIsSummaryOpen(true);
-        // 等待 React 渲染完成
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // 2. 截圖
         const canvas = await html2canvas(contentRef.current, {
-            scale: 2, // 提高解析度
-            useCORS: true, // 允許跨域圖片 (如 Gemini 生成的圖片)
+            scale: 2,
+            useCORS: true,
             logging: false,
             backgroundColor: '#ffffff'
         });
 
-        // 3. 轉換為 PDF
         const imgData = canvas.toDataURL('image/jpeg', 0.8);
-        
-        // 計算 PDF 尺寸
         const imgWidth = canvas.width;
         const imgHeight = canvas.height;
-        
-        // 使用 A4 寬度 (210mm)，高度依比例調整，製作成「長條圖」PDF 以避免內容被切斷
         const pdfWidth = 210; 
         const pdfHeight = (imgHeight * pdfWidth) / imgWidth;
 
         const pdf = new jsPDF({
             orientation: pdfHeight > pdfWidth ? 'p' : 'l',
             unit: 'mm',
-            format: [pdfWidth, pdfHeight] // 自訂尺寸
+            format: [pdfWidth, pdfHeight]
         });
 
         pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
@@ -137,7 +143,6 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
   const handleGenerateMap = async () => {
     setIsMapLoading(true);
     try {
-      // Pass the entire itinerary object to generate a map based on all locations
       const url = await generateItineraryMapImage(itinerary);
       setMapImage(url);
     } catch (error) {
@@ -146,6 +151,39 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
     } finally {
       setIsMapLoading(false);
     }
+  };
+
+  const handleShareDay = (day: DayPlan) => {
+      setExportingDay(day);
+  };
+
+  const exportStoryImage = async () => {
+      if (!storyRef.current || !exportingDay) return;
+      setIsExportingStory(true);
+
+      try {
+          // Wait a brief moment for images/fonts to settle in the hidden DOM
+          await new Promise(resolve => setTimeout(resolve, 300));
+
+          const canvas = await html2canvas(storyRef.current, {
+              scale: 1, // 1080x1920 is already large enough
+              useCORS: true,
+              backgroundColor: null,
+              logging: false,
+          });
+
+          const link = document.createElement('a');
+          link.download = `Day${exportingDay.day}_${itinerary.title || 'Trip'}_Story.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+
+      } catch (error) {
+          console.error("Story generation failed", error);
+          alert("圖片產生失敗");
+      } finally {
+          setIsExportingStory(false);
+          setExportingDay(null); // Reset to hide the container
+      }
   };
   
   return (
@@ -299,6 +337,11 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
                 {itinerary.summary}
               </p>
 
+              {/* Featured Highlights Gallery */}
+              {itinerary.featuredHighlights && itinerary.featuredHighlights.length > 0 && (
+                  <FeaturedGallery highlights={itinerary.featuredHighlights} destination={itinerary.destination || itinerary.title} />
+              )}
+
               {/* Special Alerts Section */}
               {itinerary.specialAlerts && itinerary.specialAlerts.length > 0 && (
                  <div className="mt-8 grid gap-4 text-left">
@@ -323,17 +366,35 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
               )}
           </div>
         </div>
-
+        
+        {/* ... rest of the component (List View, Map View, Footer) ... */}
         {/* --- LIST VIEW --- */}
         {viewMode === 'list' && (
           <div className="space-y-8 print:space-y-6">
             {itinerary.days.map((day: DayPlan) => (
               <div key={day.day} className="bg-white/90 rounded-3xl overflow-hidden shadow-xl border border-emerald-100 print:shadow-none print:border print:bg-white">
-                <div className="bg-emerald-600 p-4 md:p-6 flex items-center justify-between text-white">
-                  <div>
-                    <h3 className="font-bold text-2xl md:text-3xl font-serif">Day {day.day}</h3>
-                    <p className="text-emerald-100 font-medium mt-1">{day.theme}</p>
+                <div className="bg-emerald-600 p-4 md:p-6 flex items-center justify-between text-white relative overflow-hidden">
+                  <div className="relative z-10 flex flex-1 justify-between items-center">
+                      <div>
+                        <h3 className="font-bold text-2xl md:text-3xl font-serif">Day {day.day}</h3>
+                        <p className="text-emerald-100 font-medium mt-1">{day.theme}</p>
+                      </div>
+                      <button 
+                         onClick={() => handleShareDay(day)}
+                         disabled={isExportingStory}
+                         className="flex items-center gap-2 bg-white/20 hover:bg-white/30 backdrop-blur-sm px-3 py-2 rounded-lg text-white text-sm font-medium transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                         title="下載 IG Story 美圖"
+                      >
+                         {isExportingStory && exportingDay?.day === day.day ? (
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                         ) : (
+                            <Instagram className="w-5 h-5" />
+                         )}
+                         <span className="hidden sm:inline">Share</span>
+                      </button>
                   </div>
+                  {/* Decorative circles */}
+                  <div className="absolute -right-8 -top-8 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl"></div>
                 </div>
 
                 <div className="p-6 md:p-8 relative print:p-4">
@@ -496,6 +557,88 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
           )}
         </div>
       </div>
+      
+      {/* Hidden Container for Story Generation - Positioned off-screen */}
+      {exportingDay && (
+        <div 
+          ref={storyRef}
+          style={{ 
+             position: 'fixed', 
+             top: 0, 
+             left: '-9999px', // Off-screen
+             width: '1080px', 
+             height: '1920px', 
+             background: `linear-gradient(135deg, ${DAY_COLORS[(exportingDay.day - 1) % DAY_COLORS.length]} 0%, #ffffff 100%)`,
+             zIndex: -1,
+             overflow: 'hidden',
+             display: 'flex',
+             flexDirection: 'column',
+             padding: '80px',
+             fontFamily: '"Noto Sans TC", sans-serif'
+          }}
+        >
+           {/* Header */}
+           <div style={{ marginBottom: '60px', color: 'white' }}>
+               <h3 style={{ fontSize: '48px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.1em', opacity: 0.9 }}>
+                  {itinerary.destination || 'Japan Trip'}
+               </h3>
+               <h1 style={{ fontSize: '180px', fontWeight: '900', lineHeight: 1, textShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
+                  Day {exportingDay.day}
+               </h1>
+               <h2 style={{ fontSize: '56px', fontWeight: 'bold', marginTop: '20px' }}>
+                  {exportingDay.theme}
+               </h2>
+           </div>
+
+           {/* Content Card */}
+           <div style={{ 
+               flex: 1, 
+               background: 'rgba(255,255,255,0.92)', 
+               borderRadius: '60px', 
+               padding: '60px', 
+               boxShadow: '0 40px 80px rgba(0,0,0,0.15)',
+               display: 'flex',
+               flexDirection: 'column',
+               gap: '40px'
+           }}>
+              {exportingDay.activities.slice(0, 8).map((act, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '30px', alignItems: 'flex-start' }}>
+                      <div style={{ 
+                          width: '140px', 
+                          fontWeight: 'bold', 
+                          fontSize: '32px', 
+                          color: DAY_COLORS[(exportingDay.day - 1) % DAY_COLORS.length],
+                          fontFamily: 'monospace' 
+                      }}>
+                          {act.time}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '36px', fontWeight: 'bold', color: '#1f2937', marginBottom: '8px' }}>
+                              {act.activity}
+                          </div>
+                          {act.type === 'sightseeing' && (
+                             <div style={{ fontSize: '24px', color: '#6b7280', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span style={{fontSize: '20px'}}>📍</span> {act.location}
+                             </div>
+                          )}
+                      </div>
+                  </div>
+              ))}
+              {exportingDay.activities.length > 8 && (
+                 <div style={{ textAlign: 'center', color: '#9ca3af', fontSize: '28px', marginTop: 'auto' }}>
+                    And more...
+                 </div>
+              )}
+           </div>
+
+           {/* Footer */}
+           <div style={{ marginTop: '60px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: 'rgba(0,0,0,0.4)' }}>
+              <div style={{ fontSize: '32px', fontWeight: 'bold' }}>园长揪團遊日本</div>
+              <div style={{ fontSize: '24px' }}>AI Planned Itinerary</div>
+           </div>
+        </div>
+      )}
+
     </div>
   );
 };
