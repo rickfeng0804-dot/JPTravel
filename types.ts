@@ -46,6 +46,7 @@ export interface Activity {
   costEstimate?: string;
   type: ActivityType;
   geo?: GeoCoordinates; // 新增座標欄位
+  mapCode?: string; // 新增 Map Code
   travelSuggestion?: TravelSuggestion; // 新增：前往此地點的交通建議 (相對於上一地點)
 }
 

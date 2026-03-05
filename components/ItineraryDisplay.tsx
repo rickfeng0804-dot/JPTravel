@@ -452,9 +452,17 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
                                     </span>
                                     <h4 className="text-xl font-bold text-gray-800">{act.activity}</h4>
                                 </div>
-                                <div className="flex items-start text-sm text-gray-500 mb-3 ml-1">
-                                    <MapPin className="w-3.5 h-3.5 mt-0.5 mr-1 shrink-0 text-red-400" />
-                                    {act.location}
+                                <div className="flex items-start text-sm text-gray-500 mb-3 ml-1 flex-wrap gap-y-1">
+                                    <div className="flex items-center mr-3">
+                                      <MapPin className="w-3.5 h-3.5 mt-0.5 mr-1 shrink-0 text-red-400" />
+                                      {act.location}
+                                    </div>
+                                    {act.mapCode && (
+                                      <div className="flex items-center text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                                        <Navigation className="w-3 h-3 mr-1 shrink-0" />
+                                        <span className="font-mono text-xs select-all">MC: {act.mapCode}</span>
+                                      </div>
+                                    )}
                                 </div>
                                 <div className={`p-4 rounded-xl border ${style.bg} ${style.border} bg-opacity-40`}>
                                   <p className="text-gray-700 text-sm leading-relaxed">{act.description}</p>

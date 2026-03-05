@@ -53,6 +53,7 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
     4. **行程順暢度**：請確保每日行程的地理位置順暢，不要來回奔波。
     5. **繁體中文輸出**：所有文字說明請使用繁體中文。
     6. **地理座標**：請盡可能精確提供每個景點或活動地點的經緯度 (lat, lng)。
+    7. **Map Code**：請為每個景點或活動地點提供導航用的 Map Code (日本導航系統常用)。
 
     **重要提醒功能 (Critical):**
     請務必檢查使用者的旅遊日期 (${formData.startDate} 起共 ${formData.days} 天) 是否遇到：
@@ -108,6 +109,7 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
                         },
                         required: ["lat", "lng"]
                       },
+                      mapCode: { type: Type.STRING, description: "導航用的 Map Code" },
                       travelSuggestion: {
                         type: Type.OBJECT,
                         description: "從上一個行程點移動到此地點的交通建議 (當天第一個行程可為null)",
@@ -304,6 +306,32 @@ export const generateDayScheduleImage = async (dayPlan: DayPlan, destination: st
 };
 
 /**
+ * Queries the Map Code for a specific location.
+ */
+export const getMapCode = async (location: string): Promise<string> => {
+  const prompt = `
+    請查詢日本地點 "${location}" 的 Map Code (Mapcode)。
+    
+    請只回傳 Map Code 的數字字串 (例如: "123 456 789*00")。
+    如果找不到或地點不明確，請回傳 "查無資料"。
+    不要包含任何其他文字或說明。
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt,
+    });
+
+    const text = response.text?.trim();
+    return text || "查無資料";
+  } catch (error) {
+    console.error("Error fetching Map Code:", error);
+    return "查詢失敗";
+  }
+};
+
+/**
  * Generates a Studio Ghibli / Shinkai style Travel Map illustrating the itinerary.
  */
 export const generateItineraryMapImage = async (itinerary: ItineraryResult): Promise<string> => {
@@ -366,23 +394,3 @@ export const generateItineraryMapImage = async (itinerary: ItineraryResult): Pro
   throw new Error("Failed to generate map image");
 };
 
-/**
- * Retrieves the Map Code for a specific location in Japan.
- */
-export const getMapCode = async (locationName: string): Promise<string> => {
-  const prompt = `
-    Please provide the Map Code for the following location in Japan: "${locationName}".
-    
-    If the location is valid and has a Map Code, return ONLY the Map Code (e.g., "123 456 789*12").
-    If multiple Map Codes exist, return the most representative one.
-    If the location is not found or invalid, return "查無此地點的 Map Code".
-    Do not include any other text or explanation.
-  `;
-
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: prompt,
-  });
-
-  return response.text?.trim() || "查無資料";
-};

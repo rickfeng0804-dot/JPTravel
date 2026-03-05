@@ -12,6 +12,7 @@ export const exportItineraryToExcel = (itinerary: ItineraryResult) => {
         '時間': activity.time,
         '活動項目': activity.activity,
         '地點': activity.location,
+        'Map Code': activity.mapCode || '-',
         '活動說明': activity.description,
         '預算估算': activity.costEstimate || '-'
       });
@@ -38,6 +39,7 @@ export const exportItineraryToExcel = (itinerary: ItineraryResult) => {
     { wch: 12 }, // Time
     { wch: 25 }, // Activity
     { wch: 25 }, // Location
+    { wch: 15 }, // Map Code
     { wch: 60 }, // Description
     { wch: 15 }, // Cost
   ];
