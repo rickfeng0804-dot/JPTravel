@@ -365,3 +365,24 @@ export const generateItineraryMapImage = async (itinerary: ItineraryResult): Pro
   }
   throw new Error("Failed to generate map image");
 };
+
+/**
+ * Retrieves the Map Code for a specific location in Japan.
+ */
+export const getMapCode = async (locationName: string): Promise<string> => {
+  const prompt = `
+    Please provide the Map Code for the following location in Japan: "${locationName}".
+    
+    If the location is valid and has a Map Code, return ONLY the Map Code (e.g., "123 456 789*12").
+    If multiple Map Codes exist, return the most representative one.
+    If the location is not found or invalid, return "查無此地點的 Map Code".
+    Do not include any other text or explanation.
+  `;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-3-flash-preview',
+    contents: prompt,
+  });
+
+  return response.text?.trim() || "查無資料";
+};
