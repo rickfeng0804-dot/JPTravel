@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import HeroInput from './components/HeroInput';
 import ItineraryDisplay from './components/ItineraryDisplay';
-import MapCodeConverter from './components/MapCodeConverter';
 import { generateItinerary } from './services/geminiService';
 import { TripFormData, ItineraryResult, AppState } from './types';
 import { CloudSun } from 'lucide-react';
@@ -93,9 +92,6 @@ const App: React.FC = () => {
                 </p>
               </div>
               <HeroInput onSubmit={handleFormSubmit} isLoading={false} />
-              
-              {/* Map Code Converter Utility */}
-              <MapCodeConverter />
             </div>
           )}
 

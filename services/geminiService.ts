@@ -306,32 +306,6 @@ export const generateDayScheduleImage = async (dayPlan: DayPlan, destination: st
 };
 
 /**
- * Queries the Map Code for a specific location.
- */
-export const getMapCode = async (location: string): Promise<string> => {
-  const prompt = `
-    請查詢日本地點 "${location}" 的 Map Code (Mapcode)。
-    
-    請只回傳 Map Code 的數字字串 (例如: "123 456 789*00")。
-    如果找不到或地點不明確，請回傳 "查無資料"。
-    不要包含任何其他文字或說明。
-  `;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview',
-      contents: prompt,
-    });
-
-    const text = response.text?.trim();
-    return text || "查無資料";
-  } catch (error) {
-    console.error("Error fetching Map Code:", error);
-    return "查詢失敗";
-  }
-};
-
-/**
  * Generates a Studio Ghibli / Shinkai style Travel Map illustrating the itinerary.
  */
 export const generateItineraryMapImage = async (itinerary: ItineraryResult): Promise<string> => {
