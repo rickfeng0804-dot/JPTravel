@@ -53,7 +53,6 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
     4. **行程順暢度**：請確保每日行程的地理位置順暢，不要來回奔波。
     5. **繁體中文輸出**：所有文字說明請使用繁體中文。
     6. **地理座標**：請盡可能精確提供每個景點或活動地點的經緯度 (lat, lng)。
-    7. **Map Code**：請為每個景點或活動地點提供導航用的 Map Code (日本導航系統常用)。
 
     **重要提醒功能 (Critical):**
     請務必檢查使用者的旅遊日期 (${formData.startDate} 起共 ${formData.days} 天) 是否遇到：
@@ -109,7 +108,6 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
                         },
                         required: ["lat", "lng"]
                       },
-                      mapCode: { type: Type.STRING, description: "導航用的 Map Code" },
                       travelSuggestion: {
                         type: Type.OBJECT,
                         description: "從上一個行程點移動到此地點的交通建議 (當天第一個行程可為null)",
