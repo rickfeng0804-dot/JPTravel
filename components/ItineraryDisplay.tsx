@@ -5,6 +5,7 @@ import ActivityIllustration from './ActivityIllustration';
 import DayMapGenerator from './DayMapGenerator';
 import TripMap from './TripMap';
 import FeaturedGallery from './FeaturedGallery'; // Import new component
+import { generateItineraryMapImage } from '../services/geminiService';
 import { exportItineraryToExcel } from '../services/exportService';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -69,6 +70,8 @@ type ViewMode = 'list' | 'map';
 const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset }) => {
   const [isSummaryOpen, setIsSummaryOpen] = useState(true);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
+  const [mapImage, setMapImage] = useState<string | null>(null);
+  const [isMapLoading, setIsMapLoading] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   
   // States for Story Export
@@ -134,6 +137,19 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
         alert("PDF 產生失敗，請稍後再試。");
     } finally {
         setIsPdfLoading(false);
+    }
+  };
+
+  const handleGenerateMap = async () => {
+    setIsMapLoading(true);
+    try {
+      const url = await generateItineraryMapImage(itinerary);
+      setMapImage(url);
+    } catch (error) {
+      console.error("Failed to generate map:", error);
+      alert("地圖生成失敗，請稍後再試。");
+    } finally {
+      setIsMapLoading(false);
     }
   };
 
@@ -259,19 +275,60 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
           
           <div className={`p-8 pt-6 text-center border-t border-emerald-50/50 animate-fade-in print:block ${isSummaryOpen ? 'block' : 'hidden'}`}>
               
-              {/* Default Title */}
-              <div className="mb-6">
-                {itinerary.destination && (
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-sm font-medium mb-4">
-                      <MapPin className="w-3.5 h-3.5" />
-                      {itinerary.destination}
+              {/* Map Image Section */}
+              <div className={`relative w-full aspect-video md:aspect-[21/9] bg-emerald-50 mb-8 rounded-2xl overflow-hidden shadow-inner group border border-emerald-100 ${mapImage ? '' : 'print:hidden'}`}>
+                {mapImage ? (
+                  <>
+                    <img 
+                      src={mapImage} 
+                      alt="Itinerary Map" 
+                      className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-emerald-900/60 to-transparent flex flex-col justify-end p-6 text-left">
+                       <span className="text-emerald-200 text-xs font-bold tracking-widest uppercase mb-1 bg-black/20 backdrop-blur w-fit px-2 py-1 rounded">Travel Map Art</span>
+                       <h2 className="text-2xl md:text-3xl font-serif font-bold text-white drop-shadow-lg">{itinerary.title}</h2>
                     </div>
+                  </>
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+                     {isMapLoading ? (
+                       <div className="flex flex-col items-center text-emerald-600">
+                          <Loader2 className="w-10 h-10 animate-spin mb-3" />
+                          <span className="font-medium">AI 正在繪製吉卜力風格行程地圖...</span>
+                          <span className="text-xs text-emerald-500 mt-1">標註景點與路線中</span>
+                       </div>
+                     ) : (
+                       <div className="text-center">
+                          <h3 className="text-emerald-800 font-bold text-xl mb-3">視覺化您的夢幻旅程</h3>
+                          <button 
+                            onClick={handleGenerateMap}
+                            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full font-bold shadow-lg hover:shadow-emerald-200/50 hover:scale-105 transition-all"
+                          >
+                            <Map className="w-5 h-5" />
+                            生成吉卜力風格旅遊地圖
+                          </button>
+                          <p className="text-xs text-emerald-600/60 mt-3">包含主要景點路線與繁體中文標示</p>
+                       </div>
+                     )}
+                  </div>
                 )}
-                <h2 className="text-3xl font-bold text-emerald-800 font-serif mb-2 print:block">{itinerary.title}</h2>
               </div>
+
+              {/* Default Title */}
+              {(!mapImage) && (
+                <div className="mb-6">
+                  {itinerary.destination && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-sm font-medium mb-4">
+                        <MapPin className="w-3.5 h-3.5" />
+                        {itinerary.destination}
+                      </div>
+                  )}
+                  <h2 className="text-3xl font-bold text-emerald-800 font-serif mb-2 print:block">{itinerary.title}</h2>
+                </div>
+              )}
               
               {/* Print Header Logic */}
-              <div className="hidden print:block mb-6">
+              <div className={`hidden print:block mb-6 ${mapImage ? 'print:hidden' : ''}`}>
                  <h1 className="text-3xl font-bold text-emerald-800">{itinerary.title}</h1>
                  <div className="text-sm text-gray-500 mt-2">{itinerary.destination} • 園長揪團遊日本</div>
               </div>
@@ -395,11 +452,9 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
                                     </span>
                                     <h4 className="text-xl font-bold text-gray-800">{act.activity}</h4>
                                 </div>
-                                <div className="flex items-start text-sm text-gray-500 mb-3 ml-1 flex-wrap gap-y-1">
-                                    <div className="flex items-center mr-3">
-                                      <MapPin className="w-3.5 h-3.5 mt-0.5 mr-1 shrink-0 text-red-400" />
-                                      {act.location}
-                                    </div>
+                                <div className="flex items-start text-sm text-gray-500 mb-3 ml-1">
+                                    <MapPin className="w-3.5 h-3.5 mt-0.5 mr-1 shrink-0 text-red-400" />
+                                    {act.location}
                                 </div>
                                 <div className={`p-4 rounded-xl border ${style.bg} ${style.border} bg-opacity-40`}>
                                   <p className="text-gray-700 text-sm leading-relaxed">{act.description}</p>

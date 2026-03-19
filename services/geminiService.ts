@@ -365,4 +365,3 @@ export const generateItineraryMapImage = async (itinerary: ItineraryResult): Pro
   }
   throw new Error("Failed to generate map image");
 };
-
