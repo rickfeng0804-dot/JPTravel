@@ -73,6 +73,7 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
   const [mapImage, setMapImage] = useState<string | null>(null);
   const [isMapLoading, setIsMapLoading] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [showCopyToast, setShowCopyToast] = useState(false);
   
   // States for Story Export
   const [exportingDay, setExportingDay] = useState<DayPlan | null>(null);
@@ -99,6 +100,85 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
 
   const handleExportExcel = () => {
     exportItineraryToExcel(itinerary);
+  };
+
+  const handleShareItinerary = async () => {
+    try {
+      const destinationText = itinerary.destination || "日本";
+      const summaryText = itinerary.summary || "";
+      const alertsText = itinerary.specialAlerts && itinerary.specialAlerts.length > 0
+        ? itinerary.specialAlerts.map(alert => ` ⚠️ 【${alert.title}】 ${alert.description}`).join('\n')
+        : "";
+
+      const daysText = itinerary.days.map(day => {
+        const activitiesText = day.activities.map(act => `  • ${act.time} ${act.activity} (📍 ${act.location})`).join('\n');
+        return `【Day ${day.day}】 ${day.theme}\n${activitiesText}`;
+      }).join('\n\n');
+
+      const foodText = itinerary.recommendedFood && itinerary.recommendedFood.length > 0
+        ? itinerary.recommendedFood.map(food => {
+            return ` • 🍴 ${food.name} (${food.estimatedPrice})\n   推薦店家：${food.bestPlaceToEat}\n   特色：${food.description}`;
+          }).join('\n\n')
+        : "";
+
+      const souvenirsText = itinerary.recommendedSouvenirs && itinerary.recommendedSouvenirs.length > 0
+        ? itinerary.recommendedSouvenirs.map(sou => {
+            return ` • 🎁 ${sou.name} (${sou.estimatedPrice})\n   推薦地點：${sou.bestPlaceToBuy}\n   特色：${sou.description}`;
+          }).join('\n\n')
+        : "";
+
+      let shareContent = `🇯🇵 園長揪團遊日本 ｜ AI 旅遊規劃 🇯🇵\n\n`;
+      shareContent += `🏷️ 行程主題：${itinerary.title}\n`;
+      shareContent += `📍 目的地：${destinationText}\n\n`;
+      if (summaryText) {
+        shareContent += `✨ 行程摘要：\n${summaryText}\n\n`;
+      }
+      shareContent += `----------------------------------------\n`;
+      shareContent += `🗓️ 每日行程規劃：\n\n${daysText}\n\n`;
+
+      if (foodText) {
+        shareContent += `----------------------------------------\n`;
+        shareContent += `🥢 園長推薦必吃美食：\n\n${foodText}\n\n`;
+      }
+
+      if (souvenirsText) {
+        shareContent += `----------------------------------------\n`;
+        shareContent += `🎁 園長推薦必買伴手禮：\n\n${souvenirsText}\n\n`;
+      }
+
+      if (alertsText) {
+        shareContent += `----------------------------------------\n`;
+        shareContent += `💡 園長貼心小叮嚀：\n${alertsText}\n\n`;
+      }
+
+      shareContent += `----------------------------------------\n`;
+      shareContent += `✨ 備註：本行程由「園長揪團遊日本」AI 旅遊規劃系統精心規劃！快邀請旅伴們一起出發吧！\n`;
+
+      await navigator.clipboard.writeText(shareContent);
+      setShowCopyToast(true);
+      setTimeout(() => {
+        setShowCopyToast(false);
+      }, 2500);
+    } catch (err) {
+      console.error("Failed to copy itinerary text:", err);
+      // Fallback for environments lacking full clipboard api permissions
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = `🇯🇵 園長揪團遊日本 ｜ AI 旅遊規劃 🇯🇵\n\n${itinerary.title}\n${itinerary.destination || "日本"}`;
+        textarea.style.position = "fixed";
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        setShowCopyToast(true);
+        setTimeout(() => {
+          setShowCopyToast(false);
+        }, 2500);
+      } catch (fallbackErr) {
+        console.error("Fallback clipboard write failed:", fallbackErr);
+        alert("複製失敗，請手動複製網址或內容。");
+      }
+    }
   };
 
   const handleDownloadPDF = async () => {
@@ -205,16 +285,26 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
             </button>
             
             <div className="flex gap-2 md:hidden">
-                <button onClick={handleDownloadPDF} disabled={isPdfLoading} className="flex items-center text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg font-medium text-sm transition-colors disabled:opacity-50">
+                <button onClick={handleShareItinerary} className="flex items-center text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg font-medium text-sm transition-colors" title="分享行程摘要">
+                    <Share2 className="w-4 h-4" />
+                </button>
+                <button onClick={handleDownloadPDF} disabled={isPdfLoading} className="flex items-center text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg font-medium text-sm transition-colors disabled:opacity-50" title="匯出為 PDF">
                     {isPdfLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
                 </button>
-                <button onClick={handleExportExcel} className="flex items-center text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg font-medium text-sm transition-colors">
+                <button onClick={handleExportExcel} className="flex items-center text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg font-medium text-sm transition-colors" title="匯出 Excel">
                     <FileSpreadsheet className="w-4 h-4" />
                 </button>
             </div>
         </div>
         <h1 className="text-xl md:text-2xl font-bold text-gray-800 text-center truncate max-w-xs md:max-w-md">{itinerary.title}</h1>
         <div className="w-auto hidden md:flex gap-2 justify-end">
+             <button 
+                onClick={handleShareItinerary} 
+                className="flex items-center text-emerald-600 hover:text-emerald-700 font-semibold transition-colors gap-2 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100"
+             >
+                <Share2 className="w-4 h-4" />
+                分享行程
+             </button>
              <button 
                 onClick={handleDownloadPDF} 
                 disabled={isPdfLoading}
@@ -223,7 +313,7 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
                 {isPdfLoading ? (
                    <><Loader2 className="w-4 h-4 animate-spin" /> 轉檔中...</>
                 ) : (
-                   <><FileText className="w-4 h-4" /> 下載 PDF</>
+                   <><FileText className="w-4 h-4" /> 匯出為 PDF</>
                 )}
             </button>
              <button onClick={handleExportExcel} className="flex items-center text-emerald-600 hover:text-emerald-700 font-semibold transition-colors gap-2 bg-emerald-50 px-3 py-1.5 rounded-lg hover:bg-emerald-100">
@@ -636,6 +726,14 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
               <div style={{ fontSize: '32px', fontWeight: 'bold' }}>园长揪團遊日本</div>
               <div style={{ fontSize: '24px' }}>AI Planned Itinerary</div>
            </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {showCopyToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-emerald-800 text-white font-bold px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 animate-bounce">
+          <Sparkles className="w-5 h-5 text-yellow-300" />
+          <span>行程摘要已成功複製到剪貼簿！</span>
         </div>
       )}
 

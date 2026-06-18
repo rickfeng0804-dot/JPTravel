@@ -2,7 +2,14 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { TripFormData, ItineraryResult, DayPlan } from "../types";
 
 // Initialize the client. 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ 
+  apiKey: process.env.API_KEY || process.env.GEMINI_API_KEY,
+  httpOptions: {
+    headers: {
+      'User-Agent': 'aistudio-build',
+    }
+  }
+});
 
 /**
  * Generates the text-based itinerary using Gemini 3 Pro.
@@ -69,7 +76,7 @@ export const generateItinerary = async (formData: TripFormData): Promise<Itinera
   `;
 
   const response = await ai.models.generateContent({
-    model: 'gemini-3-pro-preview',
+    model: 'gemini-3.5-flash',
     contents: prompt,
     config: {
       responseMimeType: "application/json",

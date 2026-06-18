@@ -1,5 +1,6 @@
 {
   "name": "AI旅遊規劃(Rick)",
   "description": "An AI-powered travel planner that generates detailed itineraries and Studio Ghibli-style illustrated maps.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
