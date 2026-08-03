@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Map as MapIcon, ExternalLink, Navigation } from 'lucide-react';
+import { Map as MapIcon, Navigation } from 'lucide-react';
 import { DayPlan, DAY_COLORS, GeoCoordinates } from '../types';
 import * as L from 'leaflet';
 
@@ -32,12 +32,11 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 };
 
 const DayMapGenerator: React.FC<DayMapGeneratorProps> = ({ dayPlan, destination }) => {
-  const [googleMapUrl, setGoogleMapUrl] = useState<string>('');
   const [routeNodes, setRouteNodes] = useState<RouteNode[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
 
-  // 1. Calculate Google Maps Link and Stops
+  // 1. Calculate Stops
   useEffect(() => {
     // Filter activities that have meaningful locations
     const validActivities = dayPlan.activities.filter(a => 
@@ -51,35 +50,11 @@ const DayMapGenerator: React.FC<DayMapGeneratorProps> = ({ dayPlan, destination 
     );
 
     if (uniqueActivities.length < 1) {
-        setGoogleMapUrl('');
         setRouteNodes([]);
         return;
     }
 
     setRouteNodes(uniqueActivities.map(a => ({ name: a.location, geo: a.geo })));
-
-    // Helper to format location for Google Maps URL
-    const formatLoc = (act: typeof uniqueActivities[0]) => {
-         if (act.geo && act.geo.lat && act.geo.lng) {
-             return `${act.geo.lat},${act.geo.lng}`;
-         }
-         return `${act.location} ${destination} 日本`;
-    };
-
-    const origin = encodeURIComponent(formatLoc(uniqueActivities[0]));
-    const destAct = uniqueActivities[uniqueActivities.length - 1];
-    const destinationLoc = encodeURIComponent(formatLoc(destAct));
-    
-    const waypoints = uniqueActivities.slice(1, -1)
-        .map(act => encodeURIComponent(formatLoc(act)))
-        .join('|');
-
-    let mapUrl = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destinationLoc}&travelmode=transit`;
-    if (waypoints) {
-        mapUrl += `&waypoints=${waypoints}`;
-    }
-    setGoogleMapUrl(mapUrl);
-
   }, [dayPlan, destination]);
 
   // 2. Render Leaflet Map
@@ -166,7 +141,7 @@ const DayMapGenerator: React.FC<DayMapGeneratorProps> = ({ dayPlan, destination 
   }, [dayPlan]);
 
 
-  if (!googleMapUrl) return null;
+  if (routeNodes.length === 0) return null;
 
   return (
     <div className="mt-6 border-t border-emerald-100 pt-6">
@@ -216,26 +191,12 @@ const DayMapGenerator: React.FC<DayMapGeneratorProps> = ({ dayPlan, destination 
                  </div>
               </div>
 
-              {/* Visual Map & Action */}
+              {/* Visual Map */}
               <div className="flex-[2] flex flex-col gap-4">
                  {/* Leaflet Map Container */}
                  <div className="w-full h-64 md:h-72 rounded-xl overflow-hidden border border-gray-200 shadow-inner bg-gray-100 relative z-0">
                     <div ref={mapContainerRef} className="w-full h-full z-0" />
                  </div>
-
-                 {/* Google Maps Button */}
-                 <a 
-                   href={googleMapUrl} 
-                   target="_blank" 
-                   rel="noopener noreferrer"
-                   className="flex items-center justify-center gap-2 px-6 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-colors shadow-lg hover:shadow-red-200 w-full"
-                 >
-                   <ExternalLink className="w-4 h-4" />
-                   開啟 Google Maps 完整導航
-                 </a>
-                 <p className="text-xs text-gray-400 text-center">
-                   點擊按鈕將開啟 Google Maps App 進行即時導航
-                 </p>
               </div>
            </div>
         </div>

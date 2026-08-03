@@ -56,8 +56,9 @@ const HeroInput: React.FC<HeroInputProps> = ({ onSubmit, isLoading }) => {
   }, [formData.days]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    const val = (type === 'number' || type === 'range') ? parseInt(value, 10) || 1 : value;
+    setFormData(prev => ({ ...prev, [name]: val }));
   };
 
   const handleDayPreferenceChange = (index: number, field: 'location' | 'accommodation', value: string) => {
@@ -160,23 +161,36 @@ const HeroInput: React.FC<HeroInputProps> = ({ onSubmit, isLoading }) => {
             </div>
 
             {/* Days & Travelers */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="flex items-center text-gray-700 font-semibold text-sm">
-                  <Clock className="w-4 h-4 mr-2 text-emerald-500" />
-                  天數
-                </label>
-                <input
-                  type="number"
-                  name="days"
-                  min="1"
-                  max="14"
-                  value={formData.days}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none bg-gray-50/50"
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2 bg-gray-50/50 p-3.5 rounded-xl border border-gray-200/80">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center text-gray-700 font-semibold text-sm">
+                    <Clock className="w-4 h-4 mr-2 text-emerald-500" />
+                    行程天數
+                  </label>
+                  <span className="text-emerald-800 font-bold bg-emerald-100 px-3 py-0.5 rounded-full text-xs border border-emerald-200/60 shadow-sm">
+                    {formData.days} 天
+                  </span>
+                </div>
+                <div className="pt-1">
+                  <input
+                    type="range"
+                    name="days"
+                    min="1"
+                    max="14"
+                    step="1"
+                    value={formData.days}
+                    onChange={handleChange}
+                    className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-300 transition-all"
+                  />
+                  <div className="flex justify-between text-[11px] text-gray-400 font-medium px-0.5 mt-1">
+                    <span>1天</span>
+                    <span>7天</span>
+                    <span>14天</span>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 bg-gray-50/50 p-3.5 rounded-xl border border-gray-200/80 flex flex-col justify-between">
                 <label className="flex items-center text-gray-700 font-semibold text-sm">
                   <Users className="w-4 h-4 mr-2 text-emerald-500" />
                   人數
@@ -188,7 +202,7 @@ const HeroInput: React.FC<HeroInputProps> = ({ onSubmit, isLoading }) => {
                   max="20"
                   value={formData.travelers}
                   onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none bg-gray-50/50"
+                  className="w-full px-4 py-2 rounded-lg border border-gray-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 transition-all outline-none bg-white text-sm"
                 />
               </div>
             </div>

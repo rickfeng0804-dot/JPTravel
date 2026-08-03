@@ -310,6 +310,95 @@ export const generateDayScheduleImage = async (dayPlan: DayPlan, destination: st
   throw new Error("Failed to generate schedule poster");
 };
 
+export interface WeatherWidgetData {
+  location: string;
+  temperatureRange: string;
+  weatherCondition: string;
+  clothingAdvice: string;
+  packingTips: string[];
+  rainChanceOrTip: string;
+  sources?: { title: string; url: string }[];
+}
+
+/**
+ * Fetches real-time / current weather advice and clothing tips using Google Search Grounding.
+ */
+export const fetchWeatherAdvice = async (
+  destination: string,
+  days: number,
+  startDate?: string
+): Promise<WeatherWidgetData> => {
+  const dateStr = startDate ? `，出發日期約為 ${startDate}` : '';
+  const currentMonth = new Date().getMonth() + 1;
+  const prompt = `
+    請透過 Google 搜尋查詢「${destination}」目前的最新氣候、平均氣溫、天氣狀況與穿搭旅遊建議${dateStr}（行程長度 ${days} 天，當前月份約 ${currentMonth} 月）。
+    
+    請仔細整理查詢到的最新氣象資料，並精準回應。
+    只返回一個標準 JSON 物件 (不包含任何 markdown \`\`\`json 標籤或其餘贅字)：
+    {
+      "location": "${destination}",
+      "temperatureRange": "例如: 18°C ~ 24°C",
+      "weatherCondition": "例如: 多雲到晴，午後局部短暫陣雨",
+      "clothingAdvice": "給旅客的衣著穿搭詳細建議（如：建議採用洋蔥式穿搭，早晚偏涼需備輕便薄外套...）",
+      "packingTips": ["穿搭或隨身物品建議1", "建議2", "建議3"],
+      "rainChanceOrTip": "氣候提醒或降雨率（例如: 降雨機率 20%，隨身攜帶輕量摺疊傘）"
+    }
+  `;
+
+  const response = await ai.models.generateContent({
+    model: 'gemini-3.5-flash',
+    contents: prompt,
+    config: {
+      tools: [{ googleSearch: {} }],
+    },
+  });
+
+  const text = response.text || "";
+  
+  // Extract grounding search sources if available
+  const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks;
+  const sources: { title: string; url: string }[] = [];
+  if (Array.isArray(groundingChunks)) {
+    groundingChunks.forEach((chunk: any) => {
+      if (chunk.web?.uri) {
+        sources.push({
+          title: chunk.web.title || "搜尋來源",
+          url: chunk.web.uri,
+        });
+      }
+    });
+  }
+
+  try {
+    const cleanedText = text.replace(/```json/gi, '').replace(/```/gi, '').trim();
+    const jsonStart = cleanedText.indexOf('{');
+    const jsonEnd = cleanedText.lastIndexOf('}');
+    const jsonString = (jsonStart !== -1 && jsonEnd !== -1) ? cleanedText.substring(jsonStart, jsonEnd + 1) : cleanedText;
+
+    const parsed = JSON.parse(jsonString);
+    return {
+      location: parsed.location || destination,
+      temperatureRange: parsed.temperatureRange || "18°C ~ 25°C",
+      weatherCondition: parsed.weatherCondition || "氣候宜人，多雲到晴",
+      clothingAdvice: parsed.clothingAdvice || `前往${destination}建議選擇舒適保暖與防風的層次穿搭。`,
+      packingTips: Array.isArray(parsed.packingTips) && parsed.packingTips.length > 0 ? parsed.packingTips : ["舒適步行鞋", "保暖薄外套", "隨身摺疊雨傘"],
+      rainChanceOrTip: parsed.rainChanceOrTip || "攜帶輕便雨具以備不時之需",
+      sources: sources.slice(0, 4)
+    };
+  } catch (err) {
+    console.error("Failed to parse weather json from Gemini response:", text, err);
+    return {
+      location: destination,
+      temperatureRange: "18°C ~ 24°C",
+      weatherCondition: "多雲到晴",
+      clothingAdvice: `針對${destination}當地氣候，建議採用洋蔥式穿搭，白天活動舒適，早晚加件外套保暖。`,
+      packingTips: ["舒適走動鞋款", "防風透氣外套", "隨身輕量雨傘"],
+      rainChanceOrTip: "降雨機率不高，隨身帶雨傘防陽光或微雨",
+      sources: sources.slice(0, 4)
+    };
+  }
+};
+
 /**
  * Generates a Studio Ghibli / Shinkai style Travel Map illustrating the itinerary.
  */

@@ -5,6 +5,7 @@ import ActivityIllustration from './ActivityIllustration';
 import DayMapGenerator from './DayMapGenerator';
 import TripMap from './TripMap';
 import FeaturedGallery from './FeaturedGallery'; // Import new component
+import { WeatherWidget } from './WeatherWidget';
 import { generateItineraryMapImage } from '../services/geminiService';
 import { exportItineraryToExcel } from '../services/exportService';
 import html2canvas from 'html2canvas';
@@ -353,6 +354,14 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
 
       {/* Content Wrapper for PDF Capture */}
       <div ref={contentRef} className="bg-[#f0f9f6]">
+        {/* Real-time Weather & Outfit Advice Widget */}
+        <div className={viewMode === 'map' ? 'hidden' : ''}>
+          <WeatherWidget
+            destination={itinerary.destination || '日本'}
+            days={itinerary.days?.length || 1}
+          />
+        </div>
+
         {/* Main Content - Summary Card */}
         <div className={`bg-white/90 rounded-3xl overflow-hidden shadow-lg border border-emerald-50 mb-8 print:border-2 print:bg-white ${viewMode === 'map' ? 'hidden' : ''}`}>
           <button onClick={() => setIsSummaryOpen(!isSummaryOpen)} className="w-full flex items-center justify-between p-6 bg-emerald-50/30 hover:bg-emerald-50 transition-colors text-left print:hidden">
