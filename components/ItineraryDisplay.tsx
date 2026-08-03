@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ItineraryResult, DayPlan, Activity, SouvenirItem, FoodItem, TravelAlert, DAY_COLORS } from '../types';
 import { MapPin, ArrowLeft, ShoppingBag, Gift, Utensils, Camera, Train, Bed, ChevronDown, ChevronUp, BookOpen, Download, Loader2, Sparkles, Image as ImageIcon, FileSpreadsheet, Map, List, FileText, AlertTriangle, CalendarDays, Info, Flag, Bus, Footprints, Car, Timer, Navigation, Share2, Instagram } from 'lucide-react';
 import ActivityIllustration from './ActivityIllustration';
-import DayMapGenerator from './DayMapGenerator';
 import TripMap from './TripMap';
 import FeaturedGallery from './FeaturedGallery'; // Import new component
 import { WeatherWidget } from './WeatherWidget';
@@ -567,9 +566,7 @@ const ItineraryDisplay: React.FC<ItineraryDisplayProps> = ({ itinerary, onReset 
                           );
                       })}
                     </div>
-                    <div className="print:hidden">
-                      <DayMapGenerator dayPlan={day} destination={itinerary.destination || itinerary.title} />
-                    </div>
+
                 </div>
               </div>
             ))}
